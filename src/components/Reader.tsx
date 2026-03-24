@@ -260,10 +260,65 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
             
             <div className="flex items-center gap-2 sm:gap-4">
               <button 
+                onClick={async (e) => { 
+                  const btn = e.currentTarget;
+                  const originalText = btn.innerText;
+                  btn.disabled = true;
+                  btn.innerText = "...";
+
+                  try {
+                    const coords = getCropCoords();
+                    if (!coords) return;
+                    const baseUrl = window.location.origin;
+                    const params = new URLSearchParams({
+                      url: epaper.imageUrls[currentPage],
+                      x: coords.sx.toString(),
+                      y: coords.sy.toString(),
+                      w: coords.sw.toString(),
+                      h: coords.sh.toString(),
+                      title: epaper.title,
+                      edition: epaper.edition,
+                      date: epaper.date,
+                      page: (currentPage + 1).toString()
+                    });
+                    const shareUrl = `${baseUrl}/clip?${params.toString()}`;
+                    const blob = await getCroppedBlob();
+                    
+                    if (!blob) {
+                      if (navigator.share) await navigator.share({ title: epaper.title, url: shareUrl });
+                      else { await navigator.clipboard.writeText(shareUrl); alert("Link copied!"); }
+                      return;
+                    }
+
+                    const file = new File([blob], "kanuka-clip.jpg", { type: "image/jpeg" });
+                    
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                      await navigator.share({
+                        title: epaper.title,
+                        text: `Check out this news from Kanuka E-Newspaper`,
+                        url: shareUrl,
+                        files: [file]
+                      });
+                    } else if (navigator.share) {
+                      await navigator.share({ title: epaper.title, url: shareUrl });
+                    } else {
+                      await navigator.clipboard.writeText(shareUrl);
+                      alert("Share link copied to clipboard!");
+                    }
+                  } catch (err) { } finally {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                  }
+                }} 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-5 py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none disabled:opacity-50"
+              >
+                SHARE
+              </button>
+
+              <button 
                 onClick={async () => { 
                   const coords = getCropCoords();
                   if (!coords) return;
-
                   const baseUrl = window.location.origin;
                   const params = new URLSearchParams({
                     url: epaper.imageUrls[currentPage],
@@ -276,38 +331,19 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                     date: epaper.date,
                     page: (currentPage + 1).toString()
                   });
-
                   const shareUrl = `${baseUrl}/clip?${params.toString()}`;
-
-                  if (navigator.share) {
-                    try {
-                      await navigator.share({
-                        title: epaper.title,
-                        text: `Check out this article from Kanuka E-Newspaper`,
-                        url: shareUrl
-                      });
-                      setIsCropping(false);
-                      setCrop(undefined);
-                      setCompletedCrop(undefined);
-                    } catch (err) {
-                      // Silently fail on cancel
-                    }
-                  } else {
-                    await navigator.clipboard.writeText(shareUrl);
-                    alert("Share link copied to clipboard!");
-                  }
+                  await navigator.clipboard.writeText(shareUrl);
+                  alert("Link copied to clipboard!");
                 }} 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none"
+                className="bg-slate-800 hover:bg-slate-900 text-white px-3 sm:px-5 py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none"
               >
-                SHARE CLIP
+                COPY LINK
               </button>
+
               <button 
                 onClick={async (e) => { 
                   const btn = e.currentTarget;
                   btn.disabled = true;
-                  const originalText = btn.innerText;
-                  btn.innerText = "...";
-                  
                   const blob = await getCroppedBlob();
                   if (blob) {
                     const downloadUrl = URL.createObjectURL(blob);
@@ -316,14 +352,10 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                     a.download = `kanuka-clip-${epaper.date}.jpg`;
                     a.click();
                     URL.revokeObjectURL(downloadUrl);
-                  } else {
-                    alert("Download failed. Please check CORS settings.");
                   }
-                  
                   btn.disabled = false;
-                  btn.innerText = originalText;
                 }} 
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none disabled:opacity-50"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-5 py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none disabled:opacity-50"
               >
                 SAVE
               </button>
