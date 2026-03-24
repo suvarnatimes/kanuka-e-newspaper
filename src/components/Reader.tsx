@@ -7,6 +7,7 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import HTMLPageFlip from 'react-pageflip';
 
 interface ReaderProps {
   epaper: {
@@ -32,6 +33,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const cropImgRef = useRef<HTMLImageElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const flipRef = useRef<any>(null);
 
   const totalPages = epaper.imageUrls.length;
 
