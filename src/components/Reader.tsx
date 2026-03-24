@@ -7,7 +7,6 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { saveClip } from '@/app/actions/clip';
 
 interface ReaderProps {
   epaper: {
@@ -26,10 +25,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [crop, setCrop] = useState<Crop>();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [clipBlob, setClipBlob] = useState<Blob | null>(null);
   const [completedCrop, setCompletedCrop] = useState<Crop>();
-  const [shareUrlReady, setShareUrlReady] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const cropImgRef = useRef<HTMLImageElement>(null);
@@ -91,38 +87,39 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
     };
   };
 
-  const getCroppedCanvas = async (): Promise<{ blob: Blob } | null> => {
+  const getCroppedBlob = async (): Promise<Blob | null> => {
     const coords = getCropCoords();
-    if (!coords) return null;
+    if (!coords || !cropImgRef.current) return null;
 
-    setIsProcessing(true);
     try {
-      const apiUrl = `/api/clip?url=${encodeURIComponent(epaper.imageUrls[currentPage])}&x=${coords.sx}&y=${coords.sy}&w=${coords.sw}&h=${coords.sh}`;
-      const response = await fetch(apiUrl);
-      if (!response.ok) throw new Error("Clip failed");
-      const blob = await response.blob();
-      setIsProcessing(false);
-      return { blob };
+      const canvas = document.createElement('canvas');
+      canvas.width = coords.sw;
+      canvas.height = coords.sh;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      // Ensure we draw the actual image content, not the scaled version
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = epaper.imageUrls[currentPage];
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      ctx.drawImage(img, coords.sx, coords.sy, coords.sw, coords.sh, 0, 0, coords.sw, coords.sh);
+      
+      return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
+      });
     } catch (err) {
-      console.error("Clipping API Failure:", err);
-      setIsProcessing(false);
+      console.error("Client-side cropping failed:", err);
       return null;
     }
   };
 
-  // Pre-fetch clip blob when crop changes (debounced)
-  useEffect(() => {
-    if (!completedCrop || !completedCrop.width || completedCrop.width < 10) {
-      setClipBlob(null);
-      setShareUrlReady(null);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      const res = await getCroppedCanvas();
-      if (res) setClipBlob(res.blob);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [crop]);
+  // No pre-fetching needed for stateless approach
 
   const handleZoom = (direction: 'in' | 'out') => {
       setZoom(prev => direction === 'in' ? Math.min(prev + 0.5, 3) : Math.max(prev - 0.25, 0.5));
@@ -244,80 +241,74 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
             <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
               <button 
                 onClick={async () => { 
-                  if (shareUrlReady) {
-                    if (navigator.share) {
-                      try {
-                        await navigator.share({
-                          title: epaper.title,
-                          text: `Check out this article from Kanuka E-Newspaper`,
-                          url: shareUrlReady
-                        });
-                        setIsCropping(false);
-                        setShareUrlReady(null);
-                        setCrop(undefined);
-                        setCompletedCrop(undefined);
-                      } catch (err) {
-                        // User cancelled or share failed, stay on page
-                      }
-                    } else {
-                      await navigator.clipboard.writeText(shareUrlReady);
-                      alert("Share link copied to clipboard!");
-                    }
-                    return;
-                  }
-
                   const coords = getCropCoords();
                   if (!coords) return;
 
-                  setIsProcessing(true);
-                  try {
-                    const result = await saveClip({
-                      imageUrl: epaper.imageUrls[currentPage],
-                      x: coords.sx,
-                      y: coords.sy,
-                      w: coords.sw,
-                      h: coords.sh,
-                      epaperTitle: epaper.title,
-                      epaperDate: epaper.date,
-                      edition: epaper.edition,
-                      pageIndex: currentPage + 1
-                    });
+                  const baseUrl = window.location.origin;
+                  const params = new URLSearchParams({
+                    url: epaper.imageUrls[currentPage],
+                    x: coords.sx.toString(),
+                    y: coords.sy.toString(),
+                    w: coords.sw.toString(),
+                    h: coords.sh.toString(),
+                    title: epaper.title,
+                    edition: epaper.edition,
+                    date: epaper.date,
+                    page: (currentPage + 1).toString()
+                  });
 
-                    if (result.success && result.shareUrl) {
-                      const fullUrl = result.shareUrl.startsWith('http') 
-                        ? result.shareUrl 
-                        : `${window.location.origin}${result.shareUrl}`;
-                      
-                      setShareUrlReady(fullUrl);
-                    } else {
-                      throw new Error(result.error);
+                  const shareUrl = `${baseUrl}/clip?${params.toString()}`;
+
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: epaper.title,
+                        text: `Check out this article from Kanuka E-Newspaper`,
+                        url: shareUrl
+                      });
+                      setIsCropping(false);
+                      setCrop(undefined);
+                      setCompletedCrop(undefined);
+                    } catch (err) {
+                      // Silently fail on cancel
                     }
-                  } catch (err: any) {
-                    console.error("Save Clip Failed:", err);
-                    alert("Generating share link failed. Please try saving instead.");
-                  } finally {
-                    setIsProcessing(false);
+                  } else {
+                    await navigator.clipboard.writeText(shareUrl);
+                    alert("Share link copied to clipboard!");
                   }
                 }} 
-                disabled={isProcessing}
-                className={`${shareUrlReady ? 'bg-emerald-600 hover:bg-emerald-700 animate-pulse' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none ${isProcessing ? 'opacity-50 cursor-wait' : ''}`}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none"
               >
-                {isProcessing ? 'GENERATING...' : (shareUrlReady ? 'SHARE NOW' : 'SHARE CLIP')}
+                SHARE CLIP
               </button>
               <button 
-                onClick={() => { 
-                  const coords = getCropCoords();
-                  if (coords) {
-                     const downloadUrl = `/api/download?url=${encodeURIComponent(epaper.imageUrls[currentPage])}&x=${coords.sx}&y=${coords.sy}&w=${coords.sw}&h=${coords.sh}`;
-                     window.open(downloadUrl, '_blank');
+                onClick={async (e) => { 
+                  const btn = e.currentTarget;
+                  btn.disabled = true;
+                  const originalText = btn.innerText;
+                  btn.innerText = "...";
+                  
+                  const blob = await getCroppedBlob();
+                  if (blob) {
+                    const downloadUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = `kanuka-clip-${epaper.date}.jpg`;
+                    a.click();
+                    URL.revokeObjectURL(downloadUrl);
+                  } else {
+                    alert("Download failed. Please check CORS settings.");
                   }
+                  
+                  btn.disabled = false;
+                  btn.innerText = originalText;
                 }} 
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none disabled:opacity-50"
               >
                 SAVE
               </button>
               <button 
-                onClick={() => { setIsCropping(false); setCrop(undefined); setCompletedCrop(undefined); setShareUrlReady(null); }}
+                onClick={() => { setIsCropping(false); setCrop(undefined); setCompletedCrop(undefined); }}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-500 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl shadow-sm transition-all"
               >
                 <X size={14} />
