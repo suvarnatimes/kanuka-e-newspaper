@@ -28,6 +28,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const [crop, setCrop] = useState<Crop>();
   const [isProcessing, setIsProcessing] = useState(false);
   const [clipBlob, setClipBlob] = useState<Blob | null>(null);
+  const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [shareUrlReady, setShareUrlReady] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -55,12 +56,12 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   };
 
   const getCropCoords = () => {
-    if (!crop || !crop.width || crop.width < 2 || !cropImgRef.current) return null;
+    if (!completedCrop || !completedCrop.width || completedCrop.width < 2 || !cropImgRef.current) return null;
     const el = cropImgRef.current;
     const rect = el.getBoundingClientRect();
     const renderedW = rect.width;
     const renderedH = rect.height;
-    const { x: cx, y: cy, width: cw, height: ch } = crop;
+    const { x: cx, y: cy, width: cw, height: ch } = completedCrop;
     const naturalW = el.naturalWidth;
     const naturalH = el.naturalHeight;
     const imgNaturalAspect = naturalW / naturalH;
@@ -111,7 +112,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
 
   // Pre-fetch clip blob when crop changes (debounced)
   useEffect(() => {
-    if (!crop || !crop.width || crop.width < 10) {
+    if (!completedCrop || !completedCrop.width || completedCrop.width < 10) {
       setClipBlob(null);
       setShareUrlReady(null);
       return;
@@ -169,7 +170,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
         >
           {isCropping ? (
              <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
-                <ReactCrop crop={crop} onChange={c => setCrop(c)} className="w-full h-full flex items-center justify-center">
+                <ReactCrop crop={crop} onChange={c => setCrop(c)} onComplete={c => setCompletedCrop(c)} className="w-full h-full flex items-center justify-center">
                   <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
                 </ReactCrop>
              </div>
@@ -179,8 +180,18 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
 
           {zoom <= 1 && !isCropping && (
             <>
-              <button onClick={(e) => { e.stopPropagation(); currentPage > 0 && setCurrentPage(c => c - 1); }} className="fixed left-4 top-1/2 -translate-y-1/2 p-3 bg-white/5 hover:bg-indigo-600/50 backdrop-blur-3xl rounded-3xl border border-white/10 text-white transition-all shadow-2xl disabled:opacity-0 no-zoom"><ChevronLeft size={24} /></button>
-              <button onClick={(e) => { e.stopPropagation(); currentPage < totalPages - 1 && setCurrentPage(c => c + 1); }} className="fixed right-4 top-1/2 -translate-y-1/2 p-3 bg-white/5 hover:bg-indigo-600/50 backdrop-blur-3xl rounded-3xl border border-white/10 text-white transition-all shadow-2xl disabled:opacity-0 no-zoom"><ChevronRight size={24} /></button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); currentPage > 0 && setCurrentPage(c => c - 1); }} 
+                className="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2.5 bg-white/2 hover:bg-white/20 active:bg-indigo-600/30 backdrop-blur-md rounded-2xl border border-white/10 text-white/40 hover:text-white transition-all shadow-xl disabled:opacity-0 no-zoom"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); currentPage < totalPages - 1 && setCurrentPage(c => c + 1); }} 
+                className="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2.5 bg-white/2 hover:bg-white/20 active:bg-indigo-600/30 backdrop-blur-md rounded-2xl border border-white/10 text-white/40 hover:text-white transition-all shadow-xl disabled:opacity-0 no-zoom"
+              >
+                <ChevronRight size={20} />
+              </button>
             </>
           )}
         </div>
@@ -226,91 +237,98 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
         </div>
       </footer>
 
-      {isCropping && crop && (crop.width || 0) > 5 && (
-        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-4 bg-white/95 backdrop-blur-xl px-8 py-4 rounded-[2.5rem] border border-indigo-100 shadow-2xl no-zoom animate-in slide-in-from-bottom-10">
-            <span className="text-xs font-black text-indigo-600 uppercase tracking-widest">Article Selected</span>
-            <div className="w-px h-8 bg-slate-200" />
-            <button 
-              onClick={async () => { 
-                if (shareUrlReady) {
-                  // Direct user gesture share
-                  if (navigator.share) {
-                    await navigator.share({
-                      title: epaper.title,
-                      text: `Read this article from Kanuka E-Newspaper`,
-                      url: shareUrlReady
+      {isCropping && completedCrop && (completedCrop.width || 0) > 5 && (
+        <div className="fixed bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 z-[110] flex flex-col sm:flex-row items-center gap-2 sm:gap-4 bg-white/95 backdrop-blur-xl px-4 sm:px-8 py-3 sm:py-4 rounded-3xl sm:rounded-[2.5rem] border border-indigo-100 shadow-2xl no-zoom animate-in slide-in-from-bottom-10 w-[90%] sm:w-auto">
+            <span className="text-[9px] sm:text-xs font-black text-indigo-600 uppercase tracking-widest">Selection Active</span>
+            <div className="hidden sm:block w-px h-8 bg-slate-200" />
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
+              <button 
+                onClick={async () => { 
+                  if (shareUrlReady) {
+                    if (navigator.share) {
+                      await navigator.share({
+                        title: epaper.title,
+                        text: `Read this article from Kanuka E-Newspaper`,
+                        url: shareUrlReady
+                      });
+                      setIsCropping(false);
+                      setShareUrlReady(null);
+                      setCrop(undefined);
+                      setCompletedCrop(undefined);
+                    } else {
+                      await navigator.clipboard.writeText(shareUrlReady);
+                      alert("Share link copied to clipboard!");
+                    }
+                    return;
+                  }
+
+                  const coords = getCropCoords();
+                  if (!coords) return;
+
+                  setIsProcessing(true);
+                  try {
+                    const result = await saveClip({
+                      imageUrl: epaper.imageUrls[currentPage],
+                      x: coords.sx,
+                      y: coords.sy,
+                      w: coords.sw,
+                      h: coords.sh,
+                      epaperTitle: epaper.title,
+                      epaperDate: epaper.date,
+                      edition: epaper.edition,
+                      pageIndex: currentPage + 1
                     });
-                    setIsCropping(false);
-                    setShareUrlReady(null);
-                  } else {
-                    await navigator.clipboard.writeText(shareUrlReady);
-                    alert("Share link copied to clipboard!");
+
+                    if (result.success && result.shareUrl) {
+                      const fullUrl = result.shareUrl.startsWith('http') 
+                        ? result.shareUrl 
+                        : `${window.location.origin}${result.shareUrl}`;
+                      
+                      setShareUrlReady(fullUrl);
+                    } else {
+                      throw new Error(result.error);
+                    }
+                  } catch (err: any) {
+                    console.error("Save Clip Failed:", err);
+                    alert("Failed to generate share link. Saving image instead.");
+                    const blobToSave = clipBlob || (await getCroppedCanvas())?.blob;
+                    if (blobToSave) {
+                        const url = URL.createObjectURL(blobToSave); 
+                        const a = document.createElement('a'); a.download = `kanuka_clip.jpg`; a.href = url; a.click(); URL.revokeObjectURL(url); 
+                    }
+                  } finally {
+                    setIsProcessing(false);
                   }
-                  return;
-                }
-
-                const coords = getCropCoords();
-                if (!coords) return;
-
-                setIsProcessing(true);
-                try {
-                  const result = await saveClip({
-                    imageUrl: epaper.imageUrls[currentPage],
-                    x: coords.sx,
-                    y: coords.sy,
-                    w: coords.sw,
-                    h: coords.sh,
-                    epaperTitle: epaper.title,
-                    epaperDate: epaper.date,
-                    edition: epaper.edition,
-                    pageIndex: currentPage + 1
-                  });
-
-                  if (result.success && result.shareUrl) {
-                    const fullUrl = result.shareUrl.startsWith('http') 
-                      ? result.shareUrl 
-                      : `${window.location.origin}${result.shareUrl}`;
-                    
-                    setShareUrlReady(fullUrl);
-                    // On some browsers we can try immediate share, but most will block it.
-                    // So we let the user click the "READY! SHARE NOW" button which is now visible.
-                  } else {
-                    throw new Error(result.error);
-                  }
-                } catch (err: any) {
-                  console.error("Save Clip Failed:", err);
-                  alert("Failed to generate share link. Saving image instead.");
+                }} 
+                disabled={isProcessing}
+                className={`${shareUrlReady ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none ${isProcessing ? 'opacity-50 cursor-wait' : ''}`}
+              >
+                {isProcessing ? 'GENERATING...' : (shareUrlReady ? 'SHARE NOW' : 'SHARE CLIP')}
+              </button>
+              <button 
+                onClick={async () => { 
                   const blobToSave = clipBlob || (await getCroppedCanvas())?.blob;
-                  if (blobToSave) {
-                      const url = URL.createObjectURL(blobToSave); 
-                      const a = document.createElement('a'); a.download = `kanuka_clip.jpg`; a.href = url; a.click(); URL.revokeObjectURL(url); 
-                  }
-                } finally {
-                  setIsProcessing(false);
-                }
-              }} 
-              disabled={isProcessing}
-              className={`${shareUrlReady ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-5 py-2.5 rounded-2xl text-[10px] font-black shadow-lg transition-all ${isProcessing ? 'opacity-50 cursor-wait' : ''}`}
-            >
-              {isProcessing ? 'GENERATING...' : (shareUrlReady ? 'READY! SHARE NOW' : 'SHARE CLIP')}
-            </button>
-            <button 
-              onClick={async () => { 
-                const blobToSave = clipBlob || (await getCroppedCanvas())?.blob;
-                if (blobToSave) { 
-                  const url = URL.createObjectURL(blobToSave); 
-                  const a = document.createElement('a'); 
-                  a.download = `kanuka_clip.jpg`; 
-                  a.href = url; 
-                  a.click(); 
-                  URL.revokeObjectURL(url); 
-                } 
-              }} 
-              disabled={isProcessing && !clipBlob}
-              className={`bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black shadow-lg transition-all ${isProcessing && !clipBlob ? 'opacity-50 cursor-wait' : ''}`}
-            >
-              {isProcessing && !clipBlob ? 'PROCESSING...' : 'SAVE CLIP'}
-            </button>
+                  if (blobToSave) { 
+                    const url = URL.createObjectURL(blobToSave); 
+                    const a = document.createElement('a'); 
+                    a.download = `kanuka_clip.jpg`; 
+                    a.href = url; 
+                    a.click(); 
+                    URL.revokeObjectURL(url); 
+                  } 
+                }} 
+                disabled={isProcessing && !clipBlob}
+                className={`bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none ${isProcessing && !clipBlob ? 'opacity-50 cursor-wait' : ''}`}
+              >
+                {isProcessing && !clipBlob ? '...' : 'SAVE'}
+              </button>
+              <button 
+                onClick={() => { setIsCropping(false); setCrop(undefined); setCompletedCrop(undefined); setShareUrlReady(null); }}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-500 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl shadow-sm transition-all"
+              >
+                <X size={14} />
+              </button>
+            </div>
         </div>
       )}
     </div>
