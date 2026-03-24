@@ -38,12 +38,12 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const onTouchStart = (e: React.TouchEvent) => {
-    if (zoom > 1) return; 
+    if (zoom > 1 || isCropping) return; 
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
   };
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (zoom > 1) return;
+    if (zoom > 1 || isCropping) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
     if (Math.abs(dx) > 50 && dy < 80) {
@@ -144,7 +144,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
         onTouchEnd={onTouchEnd}
         onClick={(e) => {
             const target = e.target as HTMLElement;
-            if (target.closest('button, select, .no-zoom')) return;
+            if (target.closest('button, select, .no-zoom') || isCropping) return;
             setZoom(prev => prev !== 1 ? 1 : 1.5);
         }}
       >
@@ -153,7 +153,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
           style={{ width: zoom >= 1 ? `${100 * zoom}%` : `${100 * zoom}%`, maxWidth: zoom > 1 ? 'none' : '1000px' }}
         >
           {isCropping ? (
-             <div className="w-full h-full animate-in fade-in duration-300 no-zoom">
+             <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
                 <ReactCrop crop={crop} onChange={c => setCrop(c)} className="w-full h-full flex items-center justify-center">
                   <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
                 </ReactCrop>
