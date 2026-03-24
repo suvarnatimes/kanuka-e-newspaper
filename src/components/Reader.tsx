@@ -142,12 +142,11 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
 
   return (
     <div className="flex-1 flex flex-col bg-slate-900 overflow-hidden relative font-sans">
-      <div className="flex items-center justify-between px-6 py-2 bg-white/5 backdrop-blur-xl border-b border-white/10 shrink-0 z-50">
-        <div className="flex items-center gap-4 overflow-hidden text-center sm:text-left">
+      <div className="flex items-center justify-between px-6 py-2 bg-slate-800 border-b border-white/5 shrink-0 z-50">
+        <div className="flex items-center gap-4 overflow-hidden">
           <div className="flex items-baseline gap-2 overflow-hidden px-1">
             <h1 className="text-sm font-black text-white leading-tight uppercase tracking-tight truncate max-w-[140px] xs:max-w-[200px] sm:max-w-none">{epaper.title}</h1>
-            <span className="text-white/20 text-xs hidden xs:inline">|</span>
-            <p className="text-[9px] sm:text-[10px] font-bold text-indigo-400 uppercase tracking-widest whitespace-nowrap opacity-80">{epaper.edition} · {format(parseISO(epaper.date), 'MMM do, yyyy')}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap opacity-80">{epaper.edition} · {format(parseISO(epaper.date), 'MMM do, yyyy')}</p>
           </div>
         </div>
         <div className="bg-white/10 px-3 py-1 rounded-xl border border-white/5 shrink-0">
