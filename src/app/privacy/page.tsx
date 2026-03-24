@@ -4,7 +4,7 @@ import { Newspaper, ChevronLeft } from 'lucide-react';
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+    <div className="flex-1 overflow-y-auto bg-slate-50 text-slate-900 font-sans">
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl mb-4">Privacy Policy</h1>
         <p className="text-slate-500 mb-10 font-medium">Last Updated: March 2026</p>
