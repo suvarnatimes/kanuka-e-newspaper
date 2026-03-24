@@ -179,18 +179,15 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
         >
           {isCropping ? (
              <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
-                <ReactCrop crop={crop} onChange={c => setCrop(c)} onComplete={c => setCompletedCrop(c)} className="w-full h-full flex items-center justify-center">
-                  <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
-                  
-                  {crop && crop.width > 0 && (
+                <ReactCrop 
+                  crop={crop} 
+                  onChange={c => setCrop(c)} 
+                  onComplete={c => setCompletedCrop(c)}
+                  className="w-full h-full flex items-center justify-center"
+                  renderSelectionAddon={() => (
                     <div 
-                      className="absolute z-[130] flex items-center gap-px overflow-hidden rounded-lg shadow-2xl border border-white/20 no-zoom"
-                      style={{ 
-                        top: `${crop.y}%`, 
-                        left: `${crop.x}%`,
-                        transform: 'translateY(-100%) translateY(-8px)',
-                        flexDirection: 'row'
-                      }}
+                      className="absolute left-0 -top-10 z-[200] flex items-center gap-px overflow-hidden rounded-lg shadow-2xl border border-white/20 no-zoom"
+                      style={{ pointerEvents: 'auto' }}
                     >
                       <button 
                         onClick={async (e) => { 
@@ -218,7 +215,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                           });
                           setShowShareModal(true);
                         }}
-                        className="bg-white hover:bg-slate-50 text-slate-900 px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 transition-colors"
+                        className="bg-white hover:bg-slate-50 text-slate-900 px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors whitespace-nowrap"
                       >
                         <Share2 size={12} strokeWidth={2.5} />
                         Share
@@ -237,7 +234,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                             URL.revokeObjectURL(downloadUrl);
                           }
                         }}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 transition-colors border-l border-white/10"
+                        className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors border-l border-white/10 whitespace-nowrap"
                       >
                         <Download size={12} strokeWidth={2.5} />
                         Save
@@ -245,13 +242,15 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
 
                       <button 
                         onClick={(e) => { e.stopPropagation(); setIsCropping(false); setCrop(undefined); setCompletedCrop(undefined); }}
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 transition-colors border-l border-white/10"
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors border-l border-white/10 whitespace-nowrap"
                       >
                         <X size={12} strokeWidth={2.5} />
                         Cancel
                       </button>
                     </div>
                   )}
+                >
+                  <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
                 </ReactCrop>
              </div>
           ) : (

@@ -33,3 +33,27 @@ body {
 .no-zoom {
   touch-action: pan-x pan-y;
 }
+
+/* Custom ReactCrop Styling to match reference screenshot */
+.ReactCrop {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.ReactCrop__selection {
+  border: 1.5px solid #3b82f6 !important;
+  box-shadow: 0 0 0 9999em rgba(15, 23, 42, 0.4) !important;
+}
+
+.ReactCrop__drag-handle {
+  width: 10px !important;
+  height: 10px !important;
+  background-color: #3b82f6 !important;
+  border: 1px solid white !important;
+  border-radius: 2px !important;
+}
+
+.ReactCrop__drag-handle::after {
+  display: none !important;
+}
