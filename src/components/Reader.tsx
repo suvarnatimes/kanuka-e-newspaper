@@ -136,7 +136,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   }, [currentPage, totalPages]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] bg-slate-900 overflow-hidden relative font-sans">
+    <div className="flex-1 flex flex-col bg-slate-900 overflow-hidden relative font-sans">
       <div className="flex items-center justify-between px-6 py-2 bg-white/5 backdrop-blur-xl border-b border-white/10 shrink-0 z-50">
         <div className="flex items-center gap-4 overflow-hidden text-center sm:text-left">
           <div className="flex items-baseline gap-2 overflow-hidden px-1">
@@ -194,12 +194,12 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
         </div>
       </main>
 
-      <footer className="shrink-0 bg-white/95 backdrop-blur-3xl border-t border-slate-200 z-[100] safe-pb">
-        <div className="flex items-center justify-between px-4 py-2 bg-slate-50/50 no-zoom">
-          <div className="flex items-center gap-0.5 sm:gap-1">
-            <ToolBtn onClick={() => { setIsCropping(!isCropping); setCrop(undefined); if (!isCropping) setZoom(1); }} icon={<Scissors size={18} />} label="CLIP" active={isCropping} />
+      <footer className="shrink-0 bg-white border-t border-slate-200 z-[100] safe-pb shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+        <div className="flex items-center justify-between px-4 py-2 bg-white no-zoom">
+          <div className="flex items-center gap-1 sm:gap-4 flex-1 justify-start">
+            <ToolBtn onClick={() => { setIsCropping(!isCropping); setCrop(undefined); if (!isCropping) setZoom(1); }} icon={<Scissors size={20} strokeWidth={1.5} />} label="CLIP" active={isCropping} />
             <div className="relative">
-              <ToolBtn onClick={() => setShowDatePicker(!showDatePicker)} icon={<Calendar size={18} />} label="ARCH" active={showDatePicker} />
+              <ToolBtn onClick={() => setShowDatePicker(!showDatePicker)} icon={<Calendar size={20} strokeWidth={1.5} />} label="ARCH" active={showDatePicker} />
               {showDatePicker && (
                 <div ref={datePickerRef} className="absolute bottom-full mb-4 left-0 bg-white border border-slate-200 rounded-[2rem] shadow-2xl p-4 z-[110] animate-in slide-in-from-bottom-4">
                     <DayPicker mode="single" selected={parseISO(epaper.date)} onSelect={(d) => { if (d) window.location.href = `/epaper/${format(d, 'yyyy-MM-dd')}`; }} className="m-0 text-slate-800 text-sm" />
@@ -208,28 +208,39 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <select 
-                value={currentPage} 
-                onChange={(e) => { setCurrentPage(parseInt(e.target.value)); setZoom(1); }} 
-                className="bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black appearance-none cursor-pointer text-center outline-none shadow-md shadow-indigo-100 min-w-[80px]"
-              >
-                {[...Array(totalPages)].map((_, i) => <option key={i} value={i} className="bg-white text-slate-800 text-xs">PAGE {i + 1}</option>)}
-              </select>
-            </div>
-            
-            <div className="hidden md:flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1 shadow-sm">
-              <button onClick={() => handleZoom('out')} className="p-0.5 hover:bg-slate-100 rounded text-slate-400 hover:text-indigo-600 transition-all"><Minus size={14} /></button>
-              <span className="text-[9px] font-black text-slate-500 w-7 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-              <button onClick={() => handleZoom('in')} className="p-0.5 hover:bg-slate-100 rounded text-slate-400 hover:text-indigo-600 transition-all"><Plus size={14} /></button>
-            </div>
+          <div className="flex items-center gap-3">
+             <div className="relative group/page">
+                <select 
+                  value={currentPage} 
+                  onChange={(e) => { setCurrentPage(parseInt(e.target.value)); setZoom(1); }} 
+                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                >
+                  {[...Array(totalPages)].map((_, i) => <option key={i} value={i}>PAGE {i + 1}</option>)}
+                </select>
+                <div className="bg-indigo-600 text-white rounded-2xl px-5 py-2 text-[10px] font-black shadow-lg shadow-indigo-200 flex items-center gap-2 transition-transform active:scale-95">
+                   PAGE {currentPage + 1}
+                </div>
+             </div>
+
+             <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-3 py-1.5 shadow-sm">
+                <button onClick={() => handleZoom('out')} className="text-slate-400 hover:text-indigo-600 transition-all p-1"><Minus size={16} strokeWidth={3} /></button>
+                <span className="text-[10px] font-black text-slate-500 min-w-[35px] text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+                <button onClick={() => handleZoom('in')} className="text-slate-400 hover:text-indigo-600 transition-all p-1"><Plus size={16} strokeWidth={3} /></button>
+             </div>
           </div>
 
-          <div className="flex items-center gap-0.5 sm:gap-1">
-            <ToolBtn onClick={() => zoom !== 1 ? setZoom(1) : handleZoom('in')} icon={<ZoomIn size={18} />} label={zoom !== 1 ? 'RESET' : 'ZOOM'} active={zoom !== 1} />
-            <ToolBtn onClick={async () => { try { await navigator.share({ title: epaper.title, url: window.location.href }); } catch {} }} icon={<Share2 size={18} />} label="SHARE" />
-            <a href={epaper.pdfUrl} download className="flex flex-col items-center gap-1 p-2 text-slate-400 hover:text-indigo-600 transition-all"><Download size={18} /><span className="text-[9px] font-black uppercase tracking-tighter">PDF</span></a>
+          <div className="flex items-center gap-1 sm:gap-4 flex-1 justify-end">
+            <ToolBtn onClick={() => zoom !== 1 ? setZoom(1) : handleZoom('in')} icon={<ZoomIn size={20} strokeWidth={1.5} />} label={zoom !== 1 ? 'RESET' : 'ZOOM'} active={zoom !== 1} />
+            <ToolBtn onClick={async () => { 
+                const baseUrl = window.location.origin;
+                const path = window.location.pathname;
+                const fullUrl = `${baseUrl}${path}`;
+                try { await navigator.share({ title: epaper.title, url: fullUrl }); } catch {} 
+            }} icon={<Share2 size={20} strokeWidth={1.5} />} label="SHARE" />
+            <a href={epaper.pdfUrl} download className="flex flex-col items-center gap-1 p-2 text-slate-400 hover:text-indigo-600 transition-all group/pdf">
+               <Download size={20} strokeWidth={1.5} className="transition-transform group-hover/pdf:translate-y-0.5" />
+               <span className="text-[10px] font-bold uppercase tracking-tighter">PDF</span>
+            </a>
           </div>
         </div>
       </footer>
