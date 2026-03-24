@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // If the user is trying to access the upload API without a token, block them
   if (request.nextUrl.pathname.startsWith('/api/upload')) {
     const token = request.cookies.get('admin_token');
