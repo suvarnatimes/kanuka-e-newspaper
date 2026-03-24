@@ -151,22 +151,22 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   }, [currentPage, totalPages]);
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-900 overflow-hidden relative font-sans">
-      <div className="flex items-center justify-between px-6 py-2 bg-slate-800 border-b border-white/5 shrink-0 z-50">
+    <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden relative font-sans">
+      <div className="flex items-center justify-between px-6 py-2 bg-white border-b border-slate-200 shrink-0 z-50">
         <div className="flex items-center gap-4 overflow-hidden">
           <div className="flex items-baseline gap-2 overflow-hidden px-1">
-            <h1 className="text-sm font-black text-white leading-tight uppercase tracking-tight truncate max-w-[140px] xs:max-w-[200px] sm:max-w-none">{epaper.title}</h1>
+            <h1 className="text-sm font-black text-slate-800 leading-tight uppercase tracking-tight truncate max-w-[140px] xs:max-w-[200px] sm:max-w-none">{epaper.title}</h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap opacity-80">{epaper.edition} · {format(parseISO(epaper.date), 'MMM do, yyyy')}</p>
           </div>
         </div>
-        <div className="bg-white/10 px-3 py-1 rounded-xl border border-white/5 shrink-0">
-           <span className="text-[10px] font-black text-white/90 tabular-nums">{currentPage + 1} / {totalPages}</span>
+        <div className="bg-slate-100 px-3 py-1 rounded-xl border border-slate-200 shrink-0">
+           <span className="text-[10px] font-black text-slate-600 tabular-nums">{currentPage + 1} / {totalPages}</span>
         </div>
       </div>
 
       <main 
         ref={scrollRef}
-        className={`flex-1 overflow-auto bg-slate-900 flex items-start justify-center transition-all duration-300 ${zoom > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+        className={`flex-1 overflow-auto bg-slate-100/50 flex items-start justify-center transition-all duration-300 ${zoom > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         onClick={(e) => {
@@ -455,8 +455,8 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
 // Utility component for tools
 function ToolBtn({ onClick, icon, label, active = false }: { onClick: () => void, icon: React.ReactNode, label: string, active?: boolean }) {
   return (
-    <button onClick={onClick} className={`flex flex-col items-center gap-2 p-3 group transition-all active:scale-90 ${active ? 'text-indigo-600 translate-y-[-4px]' : 'text-slate-400 hover:text-indigo-600'}`}>
-      <div className={`${active ? 'bg-indigo-50 p-2 rounded-xl' : ''} transition-all`}>
+    <button onClick={onClick} className={`flex flex-col items-center gap-2 p-3 group transition-all active:scale-90 ${active ? 'text-indigo-600 translate-y-[-4px]' : 'text-slate-500 hover:text-indigo-600'}`}>
+      <div className={`${active ? 'bg-indigo-50 p-2 rounded-xl text-indigo-600' : ''} transition-all`}>
         {React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}
       </div>
       <span className="text-[10px] font-black uppercase tracking-tighter">{label}</span>
