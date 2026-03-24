@@ -104,8 +104,9 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
       if (!ctx) return null;
 
       // Use a cache-busting query to avoid cached responses without CORS
-      // Fetch as blob to handle CORS more reliably and use a same-origin Object URL
-      const response = await fetch(epaper.imageUrls[currentPage], { mode: 'cors' });
+      // Use a server-side proxy to bypass browser CORS completely
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(epaper.imageUrls[currentPage])}`;
+      const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error(`Image fetch failed: ${response.status} ${response.statusText}`);
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
