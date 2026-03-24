@@ -363,7 +363,11 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                   }}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                   <Share2 size={10}              {/* Social Icon Grid */}
+                   <Share2 size={10} />
+                </div>
+              </div>
+
+              {/* Social Icon Grid */}
               <div className="grid grid-cols-4 gap-1 w-full mb-6 overflow-hidden rounded-lg">
                  <SocialBtn 
                    color="bg-[#4267B2]" 
