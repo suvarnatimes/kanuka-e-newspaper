@@ -253,10 +253,13 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
       </footer>
 
       {isCropping && completedCrop && (completedCrop.width || 0) > 5 && (
-        <div className="fixed bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 z-[110] flex flex-col sm:flex-row items-center gap-2 sm:gap-4 bg-white/95 backdrop-blur-xl px-4 sm:px-8 py-3 sm:py-4 rounded-3xl sm:rounded-[2.5rem] border border-indigo-100 shadow-2xl no-zoom animate-in slide-in-from-bottom-10 w-[90%] sm:w-auto">
-            <span className="text-[9px] sm:text-xs font-black text-indigo-600 uppercase tracking-widest">Selection Active</span>
-            <div className="hidden sm:block w-px h-8 bg-slate-200" />
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
+        <div className="fixed bottom-0 left-0 right-0 z-[120] bg-white border-t border-indigo-100 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] no-zoom animate-in slide-in-from-bottom-full safe-pb flex items-center justify-between px-6 py-4">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Selection Active</span>
+              <p className="text-[9px] font-bold text-slate-400">Ready to share or save</p>
+            </div>
+            
+            <div className="flex items-center gap-2 sm:gap-4">
               <button 
                 onClick={async () => { 
                   const coords = getCropCoords();
