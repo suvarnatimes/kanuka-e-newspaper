@@ -177,44 +177,41 @@ export default function AdminPage() {
           setRenderProgress({ current: 0, total: numPages });
           setUploadProgress({ current: 0, total: numPages });
 
-          const uploadPromises: Promise<any>[] = [];
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
 
-          // Parallel Rendering & Uploading Loop
+          // Sequential Rendering & Uploading Loop (Sequential is safer against "Failed to fetch" concurrency errors)
           for (let i = 1; i <= numPages; i++) {
               console.log(`>>> [Sonic Speed] Rendering page ${i}/${numPages}...`);
               setRenderProgress(prev => ({ ...prev, current: i }));
               
               const page = await pdf.getPage(i);
-              const viewport = page.getViewport({ scale: 3.0 }); // Ultra HD Scale
-              const canvas = document.createElement('canvas');
-              const context = canvas.getContext('2d');
+              const viewport = page.getViewport({ scale: 2.5 }); // Excellent HD balance
+              
               canvas.height = viewport.height;
               canvas.width = viewport.width;
 
               await page.render({ canvasContext: context!, viewport }).promise;
 
               const blob = await new Promise<Blob>((resolve) => {
-                  canvas.toBlob((b) => resolve(b!), 'image/webp', 0.9); // Ultra HD WebP
+                  canvas.toBlob((b) => resolve(b!), 'image/webp', 0.85); // Optimized HD WebP
               });
 
               // @ts-ignore
               if (page.cleanup) page.cleanup();
 
-              // Trigger Upload via Server Action (Page images are small enough usually)
+              console.log(`>>> [Sonic Speed] Uploading page ${i}/${numPages}...`);
+              // Trigger Upload via Server Action
               const pageData = new FormData();
               pageData.append('image', new File([blob], `p${i}.webp`, { type: 'image/webp' }));
               
-              const upTask = appendEpaperPage(epaperId, i, fileId, datePath, pageData)
-                .then(res => {
-                    setUploadProgress(prev => ({ ...prev, current: prev.current + 1 }));
-                    return res;
-                });
+              const res = await appendEpaperPage(epaperId, i, fileId, datePath, pageData);
+              if (!res.success) {
+                  throw new Error(`Failed to upload page ${i}: ${res.error}`);
+              }
               
-              uploadPromises.push(upTask);
+              setUploadProgress(prev => ({ ...prev, current: i }));
           }
-
-          console.log(">>> [Sonic Speed] All pages rendered. Awaiting remaining uploads...");
-          await Promise.all(uploadPromises);
 
           // Finalize
           console.log(">>> [Sonic Speed] Finalizing publication...");
