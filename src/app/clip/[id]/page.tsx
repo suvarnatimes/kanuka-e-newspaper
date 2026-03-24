@@ -146,14 +146,14 @@ export default async function ClipPage({ params }: ClipPageProps) {
         </div>
       </main>
 
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           .no-print { display: none !important; }
           header, footer, .sidebar { display: none !important; }
           body { background: white !important; }
           main { p: 0 !important; max-width: 100% !important; }
         }
-      `}</style>
+      `}} />
     </div>
   );
 }
