@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Download, Scissors, ZoomIn, Save, X, Share2, Plus, Minus, Newspaper } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Download, Scissors, ZoomIn, Save, X, Share2, Plus, Minus, Newspaper, Facebook, Instagram, MessageSquare } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -329,53 +329,100 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
         </div>
       </footer>
 
-      {/* Share Modal Overlay */}
+      {/* Share Modal Overlay - Prajabhoomi "Pro" Style */}
       {showShareModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowShareModal(false)} />
-          <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 relative z-10">
-            <div className="p-8 pb-4">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 leading-tight">Share Clip</h3>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Select Platform</p>
-                </div>
-                <button onClick={() => setShowShareModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                  <X size={20} className="text-slate-400" />
-                </button>
-              </div>
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowShareModal(false)} />
+          <div className="bg-white rounded-xl w-full max-w-[340px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 relative z-10 border border-slate-200">
+            {/* Header */}
+            <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-b border-slate-200">
+              <h3 className="text-sm font-black text-slate-700">Share It</h3>
+              <button onClick={() => setShowShareModal(false)} className="p-1 hover:bg-slate-200 rounded-md transition-colors bg-slate-200">
+                <X size={16} className="text-slate-600" />
+              </button>
+            </div>
 
+            <div className="p-4 flex flex-col items-center">
+              {/* Image Preview */}
               {shareData.blob && (
-                <div className="aspect-video w-full bg-slate-100 rounded-3xl mb-8 overflow-hidden border border-slate-100 shadow-inner">
-                  <img src={URL.createObjectURL(shareData.blob)} alt="Preview" className="w-full h-full object-contain" />
+                <div className="w-full aspect-[3/4] bg-slate-100 rounded-lg mb-4 overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center p-2">
+                  <img src={URL.createObjectURL(shareData.blob)} alt="Preview" className="max-w-full max-h-full object-contain" />
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              {/* URL Box */}
+              <div className="w-full relative mb-4">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={shareData.url}
+                  className="w-full bg-slate-50 border border-slate-300 rounded text-[10px] py-2 px-3 pr-10 text-slate-500 font-mono focus:outline-none"
+                  onClick={(e) => {
+                     (e.target as HTMLInputElement).select();
+                     navigator.clipboard.writeText(shareData.url);
+                  }}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                   <Share2 size={10} />
+                </div>
+              </div>
+
+              {/* Social Icon Grid */}
+              <div className="grid grid-cols-4 gap-1 w-full mb-6 overflow-hidden rounded-lg">
                  <SocialBtn 
-                   color="bg-[#25D366]" 
-                   label="WhatsApp" 
-                   onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Check out this news from Kanuka E-Newspaper: ' + shareData.url)}`)} 
+                   color="bg-[#4267B2]" 
+                   icon={<Facebook size={18} fill="currentColor" />}
+                   onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`)} 
                  />
                  <SocialBtn 
-                   color="bg-[#1877F2]" 
-                   label="Facebook" 
-                   onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`)} 
+                   color="bg-black" 
+                   icon={<span className="text-sm font-black italic">X</span>}
+                   onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareData.url)}`)} 
+                 />
+                 <SocialBtn 
+                   color="bg-[#25D366]" 
+                   icon={<MessageSquare size={18} fill="currentColor" />}
+                   onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Check out this news from Kanuka: ' + shareData.url)}`)} 
+                 />
+                 <SocialBtn 
+                   color="bg-[#C13584]" 
+                   icon={<Instagram size={18} />}
+                   onClick={() => {
+                      navigator.clipboard.writeText(shareData.url);
+                      alert("Link copied! You can now paste it into your Instagram story or message.");
+                      window.open('https://instagram.com');
+                   }} 
                  />
               </div>
 
-              <button 
-                onClick={async () => {
-                   await navigator.clipboard.writeText(shareData.url);
-                   alert("Link copied to clipboard!");
-                }}
-                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-200 active:scale-95 transition-all mb-4"
-              >
-                Copy Share Link
-              </button>
+              {/* Action Buttons Row */}
+              <div className="grid grid-cols-2 gap-px w-full rounded-md overflow-hidden">
+                 <button 
+                   onClick={() => window.open(shareData.url, '_blank')}
+                   className="flex items-center justify-center gap-2 bg-[#7F8C8D] hover:bg-[#6C7A7B] text-white py-2.5 text-[11px] font-bold"
+                 >
+                   <Plus size={14} className="rotate-45" /> Open
+                 </button>
+                 <button 
+                   onClick={() => {
+                      if (shareData.blob) {
+                         const downloadUrl = URL.createObjectURL(shareData.blob);
+                         const a = document.createElement('a');
+                         a.href = downloadUrl;
+                         a.download = `kanuka-clip-${epaper.date}.jpg`;
+                         a.click();
+                         URL.revokeObjectURL(downloadUrl);
+                      }
+                   }}
+                   className="flex items-center justify-center gap-2 bg-[#4A69BD] hover:bg-[#3C55A5] text-white py-2.5 text-[11px] font-bold"
+                 >
+                   <Download size={14} /> Download
+                 </button>
+              </div>
             </div>
-            <div className="bg-slate-50 p-4 text-center">
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Stateless Image Sharing Enabled</p>
+            
+            <div className="bg-white pb-6 text-center">
+               <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Share to Social Network</p>
             </div>
           </div>
         </div>
@@ -396,13 +443,13 @@ function ToolBtn({ onClick, icon, label, active = false }: { onClick: () => void
   );
 }
 
-function SocialBtn({ color, label, onClick }: { color: string, label: string, onClick: () => void }) {
+function SocialBtn({ color, icon, onClick }: { color: string, icon: React.ReactNode, onClick: () => void }) {
   return (
     <button 
       onClick={onClick}
-      className={`w-full ${color} text-white p-4 rounded-2xl flex flex-col items-center gap-2 shadow-lg hover:brightness-110 active:scale-95 transition-all`}
+      className={`w-full ${color} text-white h-12 flex items-center justify-center shadow-sm hover:brightness-110 active:scale-95 transition-all`}
     >
-      <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+      {icon}
     </button>
   );
 }
