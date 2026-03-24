@@ -106,7 +106,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
       // Use a cache-busting query to avoid cached responses without CORS
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.src = `${epaper.imageUrls[currentPage]}${epaper.imageUrls[currentPage].includes('?') ? '&' : '?'}cv=${new Date().getTime()}`;
+      img.src = epaper.imageUrls[currentPage];
       
       await new Promise((resolve, reject) => {
         img.onload = resolve;
