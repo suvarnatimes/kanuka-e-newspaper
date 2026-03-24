@@ -198,7 +198,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
         </div>
       </main>
 
-      <footer className="shrink-0 bg-white border-t border-slate-200 z-[100] safe-pb shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+      <footer className="shrink-0 bg-white border-t border-slate-200 z-[100] safe-pb pb-2 sm:pb-0 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
         <div className="flex items-center justify-between px-4 py-2 bg-white no-zoom">
           <div className="flex items-center gap-1 sm:gap-4 flex-1 justify-start">
             <ToolBtn onClick={() => { setIsCropping(!isCropping); setCrop(undefined); if (!isCropping) setZoom(1); }} icon={<Scissors size={20} strokeWidth={1.5} />} label="CLIP" active={isCropping} />
