@@ -7,6 +7,7 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { saveClip } from '@/app/actions/clip';
 
 interface ReaderProps {
   epaper: {
@@ -27,6 +28,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const [crop, setCrop] = useState<Crop>();
   const [isProcessing, setIsProcessing] = useState(false);
   const [clipBlob, setClipBlob] = useState<Blob | null>(null);
+  const [shareUrlReady, setShareUrlReady] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const cropImgRef = useRef<HTMLImageElement>(null);
@@ -52,7 +54,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
     }
   };
 
-  const getCroppedCanvas = async (): Promise<{ blob: Blob } | null> => {
+  const getCropCoords = () => {
     if (!crop || !crop.width || crop.width < 2 || !cropImgRef.current) return null;
     const el = cropImgRef.current;
     const rect = el.getBoundingClientRect();
@@ -80,9 +82,21 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
     const sw = Math.min(naturalW - sx, cw * scaleX);
     const sh = Math.min(naturalH - sy, ch * scaleY);
 
+    return {
+      sx: Math.round(sx),
+      sy: Math.round(sy),
+      sw: Math.round(sw),
+      sh: Math.round(sh)
+    };
+  };
+
+  const getCroppedCanvas = async (): Promise<{ blob: Blob } | null> => {
+    const coords = getCropCoords();
+    if (!coords) return null;
+
     setIsProcessing(true);
     try {
-      const apiUrl = `/api/clip?url=${encodeURIComponent(epaper.imageUrls[currentPage])}&x=${Math.round(sx)}&y=${Math.round(sy)}&w=${Math.round(sw)}&h=${Math.round(sh)}`;
+      const apiUrl = `/api/clip?url=${encodeURIComponent(epaper.imageUrls[currentPage])}&x=${coords.sx}&y=${coords.sy}&w=${coords.sw}&h=${coords.sh}`;
       const response = await fetch(apiUrl);
       if (!response.ok) throw new Error("Clip failed");
       const blob = await response.blob();
@@ -99,6 +113,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   useEffect(() => {
     if (!crop || !crop.width || crop.width < 10) {
       setClipBlob(null);
+      setShareUrlReady(null);
       return;
     }
     const timer = setTimeout(async () => {
@@ -217,43 +232,67 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
             <div className="w-px h-8 bg-slate-200" />
             <button 
               onClick={async () => { 
-                const blobToShare = clipBlob || (await getCroppedCanvas())?.blob;
-                if (blobToShare) {
-                  const file = new File([blobToShare], 'clipping.jpg', { type: 'image/jpeg' });
-                  const shareData = {
-                    files: [file],
-                    title: epaper.title,
-                    text: `Clipping from ${epaper.title} · ${format(parseISO(epaper.date), 'MMM do, yyyy')}`
-                  };
-                  
-                  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-                    try {
-                      await navigator.share(shareData);
-                    } catch (err: any) {
-                      if (err.name !== 'AbortError') {
-                        const url = URL.createObjectURL(blobToShare);
-                        const a = document.createElement('a');
-                        a.download = `kanuka_clip.jpg`;
-                        a.href = url;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }
-                    }
+                if (shareUrlReady) {
+                  // Direct user gesture share
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: epaper.title,
+                      text: `Read this article from Kanuka E-Newspaper`,
+                      url: shareUrlReady
+                    });
+                    setIsCropping(false);
+                    setShareUrlReady(null);
                   } else {
-                    const url = URL.createObjectURL(blobToShare);
-                    const a = document.createElement('a');
-                    a.download = `kanuka_clip.jpg`;
-                    a.href = url;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    alert("Sharing files is not supported on this browser. The clip has been saved instead.");
+                    await navigator.clipboard.writeText(shareUrlReady);
+                    alert("Share link copied to clipboard!");
                   }
+                  return;
+                }
+
+                const coords = getCropCoords();
+                if (!coords) return;
+
+                setIsProcessing(true);
+                try {
+                  const result = await saveClip({
+                    imageUrl: epaper.imageUrls[currentPage],
+                    x: coords.sx,
+                    y: coords.sy,
+                    w: coords.sw,
+                    h: coords.sh,
+                    epaperTitle: epaper.title,
+                    epaperDate: epaper.date,
+                    edition: epaper.edition,
+                    pageIndex: currentPage + 1
+                  });
+
+                  if (result.success && result.shareUrl) {
+                    const fullUrl = result.shareUrl.startsWith('http') 
+                      ? result.shareUrl 
+                      : `${window.location.origin}${result.shareUrl}`;
+                    
+                    setShareUrlReady(fullUrl);
+                    // On some browsers we can try immediate share, but most will block it.
+                    // So we let the user click the "READY! SHARE NOW" button which is now visible.
+                  } else {
+                    throw new Error(result.error);
+                  }
+                } catch (err: any) {
+                  console.error("Save Clip Failed:", err);
+                  alert("Failed to generate share link. Saving image instead.");
+                  const blobToSave = clipBlob || (await getCroppedCanvas())?.blob;
+                  if (blobToSave) {
+                      const url = URL.createObjectURL(blobToSave); 
+                      const a = document.createElement('a'); a.download = `kanuka_clip.jpg`; a.href = url; a.click(); URL.revokeObjectURL(url); 
+                  }
+                } finally {
+                  setIsProcessing(false);
                 }
               }} 
-              disabled={isProcessing && !clipBlob}
-              className={`bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black shadow-lg transition-all ${isProcessing && !clipBlob ? 'opacity-50 cursor-wait' : ''}`}
+              disabled={isProcessing}
+              className={`${shareUrlReady ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-5 py-2.5 rounded-2xl text-[10px] font-black shadow-lg transition-all ${isProcessing ? 'opacity-50 cursor-wait' : ''}`}
             >
-              {isProcessing && !clipBlob ? 'PROCESSING...' : 'SHARE CLIP'}
+              {isProcessing ? 'GENERATING...' : (shareUrlReady ? 'READY! SHARE NOW' : 'SHARE CLIP')}
             </button>
             <button 
               onClick={async () => { 
