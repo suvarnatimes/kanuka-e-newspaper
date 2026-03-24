@@ -103,6 +103,28 @@ export default function AdminPage() {
 
   const [renderProgress, setRenderProgress] = useState({ current: 0, total: 0 });
 
+  const uploadToR2 = async (file: File | Blob, key: string, contentType: string) => {
+    const res = await fetch('/api/upload/presigned', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, contentType })
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to get upload authorization");
+    }
+    const { url } = await res.json();
+
+    const putRes = await fetch(url, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': contentType }
+    });
+    if (!putRes.ok) throw new Error("Cloud upload rejected by storage server");
+    
+    return true;
+  };
+
   const handleCreateOrUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (view === 'add' && !file) {
@@ -132,19 +154,26 @@ export default function AdminPage() {
           const pdf = await loadingTask.promise;
           const numPages = pdf.numPages;
 
-          // Start overall process
+          const fileId = Math.random().toString(36).substring(2, 11);
+          const datePath = new Date(date).toISOString().split("T")[0];
+          const pdfKey = `epapers/${datePath}/${fileId}/document.pdf`;
+
+          console.log(">>> [Direct Upload] Uploading PDF to R2 via Presigned URL...");
+          await uploadToR2(file!, pdfKey, "application/pdf");
+
+          // Start overall process (Metadata only now, no file)
           const startData = new FormData();
-          startData.append('file', file!);
           startData.append('title', title);
           startData.append('date', date);
           startData.append('edition', edition);
           startData.append('state', state);
+          startData.append('pdfKey', pdfKey); 
 
-          console.log(">>> [Sonic Speed] Step 1: Creating placeholder & uploading PDF...");
+          console.log(">>> [Direct Upload] Initializing database record...");
           const init = await startEpaperUpload(startData);
           if (!init.success) throw new Error(init.error);
 
-          const { epaperId, fileId, datePath } = init as any;
+          const { epaperId } = init as any;
           setRenderProgress({ current: 0, total: numPages });
           setUploadProgress({ current: 0, total: numPages });
 
@@ -171,7 +200,7 @@ export default function AdminPage() {
               // @ts-ignore
               if (page.cleanup) page.cleanup();
 
-              // Trigger Upload (Don't await yet - keep rendering!)
+              // Trigger Upload via Server Action (Page images are small enough usually)
               const pageData = new FormData();
               pageData.append('image', new File([blob], `p${i}.webp`, { type: 'image/webp' }));
               

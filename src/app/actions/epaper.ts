@@ -9,33 +9,43 @@ import { revalidatePath } from "next/cache";
 
 export async function startEpaperUpload(formData: FormData) {
   const startTime = Date.now();
-  console.log(">>> [Sonic Speed] startEpaperUpload started");
+  console.log(">>> startEpaperUpload started");
   try {
-    const file = formData.get("file") as File;
+    const file = formData.get("file") as File | null;
     const title = formData.get("title") as string;
     const dateStr = formData.get("date") as string;
     const edition = formData.get("edition") as string;
     const state = formData.get("state") as string;
+    const preUploadedPdfKey = formData.get("pdfKey") as string | null;
 
     const date = new Date(dateStr);
     const fileId = uuidv4();
     const datePath = date.toISOString().split("T")[0];
-    const pdfKey = `epapers/${datePath}/${fileId}/document.pdf`;
-    
-    // 1. Upload Original PDF (First step for any new/replaced publication)
-    const pdfBuffer = Buffer.from(await file.arrayBuffer());
-    console.log(`>>> uploading PDF to R2: ${pdfKey} (${pdfBuffer.length} bytes)`);
-    
-    try {
-      await r2Client.send(new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: pdfKey,
-        Body: pdfBuffer,
-        ContentType: "application/pdf"
-      }));
-    } catch (r2Err: any) {
-      console.error(">>> R2 Upload Failed:", r2Err);
-      throw new Error(`Cloud Storage Error: ${r2Err.message || 'Unknown R2 error'}`);
+    let pdfUrl = "";
+
+    if (preUploadedPdfKey) {
+        pdfUrl = `${R2_PUBLIC_URL}/${preUploadedPdfKey}`;
+    } else if (file) {
+      const pdfKey = `epapers/${datePath}/${fileId}/document.pdf`;
+      const pdfBuffer = Buffer.from(await file.arrayBuffer());
+      console.log(`>>> uploading PDF to R2: ${pdfKey} (${pdfBuffer.length} bytes)`);
+      
+      try {
+        await r2Client.send(new PutObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: pdfKey,
+          Body: pdfBuffer,
+          ContentType: "application/pdf"
+        }));
+        pdfUrl = `${R2_PUBLIC_URL}/${pdfKey}`;
+      } catch (r2Err: any) {
+        console.error(">>> R2 Upload Failed:", r2Err);
+        throw new Error(`Cloud Storage Error: ${r2Err.message || 'Unknown R2 error'}`);
+      }
+    }
+
+    if (!pdfUrl) {
+      throw new Error("No PDF file or pre-uploaded key provided.");
     }
 
     console.log(">>> connecting to database...");
@@ -47,7 +57,7 @@ export async function startEpaperUpload(formData: FormData) {
       date,
       edition,
       state,
-      pdfUrl: `${R2_PUBLIC_URL}/${pdfKey}`,
+      pdfUrl: pdfUrl,
       imageUrls: [] // Will be filled page by page
     });
 
@@ -63,23 +73,29 @@ export async function startEpaperUpload(formData: FormData) {
 
 export async function appendEpaperPage(epaperId: string, pageIndex: number, fileId: string, datePath: string, formData: FormData) {
   try {
-    const imgFile = formData.get("image") as File;
-    const imgBuffer = Buffer.from(await imgFile.arrayBuffer());
-    const imgKey = `epapers/${datePath}/${fileId}/page-${pageIndex}.webp`;
-    
-    // Upload to R2
-    await r2Client.send(new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: imgKey,
-        Body: imgBuffer,
-        ContentType: "image/webp"
-    }));
+    const imgFile = formData.get("image") as File | null;
+    const preUploadedImgUrl = formData.get("imageUrl") as string | null;
+    let imageUrl = preUploadedImgUrl;
 
-    const imageUrl = `${R2_PUBLIC_URL}/${imgKey}`;
+    if (!imageUrl && imgFile) {
+        const imgBuffer = Buffer.from(await imgFile.arrayBuffer());
+        const imgKey = `epapers/${datePath}/${fileId}/page-${pageIndex}.webp`;
+        
+        // Upload to R2
+        await r2Client.send(new PutObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: imgKey,
+            Body: imgBuffer,
+            ContentType: "image/webp"
+        }));
+        imageUrl = `${R2_PUBLIC_URL}/${imgKey}`;
+    }
+
+    if (!imageUrl) {
+        throw new Error("No image file or URL provided.");
+    }
 
     await connectToDatabase();
-    // Use $set with index to ensure order if parallel uploads finish out of order
-    // But since we want to be safe, we'll use a position-based update
     await Epaper.findByIdAndUpdate(epaperId, {
         $set: { [`imageUrls.${pageIndex - 1}`]: imageUrl }
     });
