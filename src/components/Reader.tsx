@@ -103,14 +103,14 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
       const ctx = canvas.getContext('2d');
       if (!ctx) return null;
 
-      // Ensure we draw the actual image content, not the scaled version
+      // Use a cache-busting query to avoid cached responses without CORS
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.src = epaper.imageUrls[currentPage];
+      img.src = `${epaper.imageUrls[currentPage]}${epaper.imageUrls[currentPage].includes('?') ? '&' : '?'}cv=${new Date().getTime()}`;
       
       await new Promise((resolve, reject) => {
         img.onload = resolve;
-        img.onerror = reject;
+        img.onerror = (e) => reject(new Error("Image load failed for canvas"));
       });
 
       ctx.drawImage(img, coords.sx, coords.sy, coords.sw, coords.sh, 0, 0, coords.sw, coords.sh);
@@ -118,8 +118,8 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
       return new Promise((resolve) => {
         canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
       });
-    } catch (err) {
-      console.error("Client-side cropping failed:", err);
+    } catch (err: any) {
+      console.error("Client-side cropping failed:", err?.message || err);
       return null;
     }
   };
@@ -172,11 +172,11 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
           {isCropping ? (
              <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
                 <ReactCrop crop={crop} onChange={c => setCrop(c)} onComplete={c => setCompletedCrop(c)} className="w-full h-full flex items-center justify-center">
-                  <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
+                  <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} crossOrigin="anonymous" alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
                 </ReactCrop>
              </div>
           ) : (
-             <img src={epaper.imageUrls[currentPage]} alt={`Page ${currentPage + 1}`} className="w-full h-auto object-contain select-none shadow-2xl rounded-lg" draggable={false} />
+             <img src={epaper.imageUrls[currentPage]} crossOrigin="anonymous" alt={`Page ${currentPage + 1}`} className="w-full h-auto object-contain select-none shadow-2xl rounded-lg" draggable={false} />
           )}
 
           {zoom <= 1 && !isCropping && (
