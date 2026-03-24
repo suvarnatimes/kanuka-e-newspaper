@@ -183,7 +183,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                   crop={crop} 
                   onChange={c => setCrop(c)} 
                   onComplete={c => setCompletedCrop(c)}
-                  className="w-full h-full flex items-center justify-center"
+                  className="w-full h-full flex items-center justify-center font-sans"
                   renderSelectionAddon={() => (
                     <div 
                       className="absolute left-0 -top-10 z-[200] flex items-center gap-px overflow-hidden rounded-lg shadow-2xl border border-white/20 no-zoom"
@@ -193,27 +193,13 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                         onClick={async (e) => { 
                           e.stopPropagation();
                           const blob = await getCroppedBlob();
-                          const coords = getCropCoords();
-                          if (!coords) return;
-                          
-                          const baseUrl = window.location.origin;
-                          const params = new URLSearchParams({
-                            url: epaper.imageUrls[currentPage],
-                            x: coords.sx.toString(),
-                            y: coords.sy.toString(),
-                            w: coords.sw.toString(),
-                            h: coords.sh.toString(),
-                            title: epaper.title,
-                            edition: epaper.edition,
-                            date: epaper.date,
-                            page: (currentPage + 1).toString()
-                          });
-                          
-                          setShareData({
-                             url: window.location.href,
-                             blob: blob
-                          });
-                          setShowShareModal(true);
+                          if (blob) {
+                            setShareData({
+                               url: window.location.href,
+                               blob: blob
+                            });
+                            setShowShareModal(true);
+                          }
                         }}
                         className="bg-white hover:bg-slate-50 text-slate-900 px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors whitespace-nowrap"
                       >
@@ -254,22 +240,62 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                 </ReactCrop>
              </div>
           ) : (
-             <img src={epaper.imageUrls[currentPage]} alt={`Page ${currentPage + 1}`} className="w-full h-auto object-contain select-none shadow-2xl rounded-lg" draggable={false} />
+            /* @ts-ignore */
+            <HTMLPageFlip
+              width={550}
+              height={800}
+              size="stretch"
+              minWidth={315}
+              maxWidth={1000}
+              minHeight={400}
+              maxHeight={1533}
+              maxShadowOpacity={0.5}
+              showCover={false}
+              mobileScrollSupport={true}
+              onFlip={(e: any) => setCurrentPage(e.data)}
+              className="page-flip-container shadow-2xl rounded-lg overflow-hidden"
+              style={{ margin: '0 auto' }}
+              useMouseEvents={zoom === 1}
+              startPage={currentPage}
+              ref={flipRef}
+            >
+              {epaper.imageUrls.map((url, i) => (
+                <div key={i} className="page shadow-inner bg-slate-800 flex items-center justify-center">
+                  <img src={url} alt={`Page ${i + 1}`} className="w-full h-full object-contain pointer-events-none" />
+                </div>
+              ))}
+            </HTMLPageFlip>
           )}
 
           {zoom <= 1 && !isCropping && (
             <>
               <button 
-                onClick={(e) => { e.stopPropagation(); currentPage > 0 && setCurrentPage(c => c - 1); }} 
-                className="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 p-1 sm:p-1.5 bg-transparent hover:bg-white/5 active:bg-indigo-600/20 backdrop-blur-none sm:backdrop-blur-sm rounded-xl border border-white/5 text-white/20 hover:text-white/60 transition-all shadow-none z-[60] no-zoom"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  if (flipRef.current) {
+                    /* @ts-ignore */
+                    flipRef.current.pageFlip().flipPrev();
+                  } else {
+                    currentPage > 0 && setCurrentPage(c => c - 1);
+                  }
+                }} 
+                className="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/10 text-white transition-all z-[100] no-zoom shadow-2xl"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={20} />
               </button>
               <button 
-                onClick={(e) => { e.stopPropagation(); currentPage < totalPages - 1 && setCurrentPage(c => c + 1); }} 
-                className="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1 sm:p-1.5 bg-transparent hover:bg-white/5 active:bg-indigo-600/20 backdrop-blur-none sm:backdrop-blur-sm rounded-xl border border-white/5 text-white/20 hover:text-white/60 transition-all shadow-none z-[60] no-zoom"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  if (flipRef.current) {
+                    /* @ts-ignore */
+                    flipRef.current.pageFlip().flipNext();
+                  } else {
+                    currentPage < totalPages - 1 && setCurrentPage(c => c + 1);
+                  }
+                }} 
+                className="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/10 text-white transition-all z-[100] no-zoom shadow-2xl"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={20} />
               </button>
             </>
           )}
