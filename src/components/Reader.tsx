@@ -26,6 +26,8 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const [isCropping, setIsCropping] = useState(false);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareData, setShareData] = useState<{ url: string, blob: Blob | null }>({ url: '', blob: null });
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const cropImgRef = useRef<HTMLImageElement>(null);
@@ -179,6 +181,77 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
              <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
                 <ReactCrop crop={crop} onChange={c => setCrop(c)} onComplete={c => setCompletedCrop(c)} className="w-full h-full flex items-center justify-center">
                   <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
+                  
+                  {crop && crop.width > 0 && (
+                    <div 
+                      className="absolute z-[130] flex items-center gap-px overflow-hidden rounded-lg shadow-2xl border border-white/20 no-zoom"
+                      style={{ 
+                        top: `${crop.y}%`, 
+                        left: `${crop.x}%`,
+                        transform: 'translateY(-100%) translateY(-8px)',
+                        flexDirection: 'row'
+                      }}
+                    >
+                      <button 
+                        onClick={async (e) => { 
+                          e.stopPropagation();
+                          const blob = await getCroppedBlob();
+                          const coords = getCropCoords();
+                          if (!coords) return;
+                          
+                          const baseUrl = window.location.origin;
+                          const params = new URLSearchParams({
+                            url: epaper.imageUrls[currentPage],
+                            x: coords.sx.toString(),
+                            y: coords.sy.toString(),
+                            w: coords.sw.toString(),
+                            h: coords.sh.toString(),
+                            title: epaper.title,
+                            edition: epaper.edition,
+                            date: epaper.date,
+                            page: (currentPage + 1).toString()
+                          });
+                          
+                          setShareData({
+                             url: `${baseUrl}/clip?${params.toString()}`,
+                             blob: blob
+                          });
+                          setShowShareModal(true);
+                        }}
+                        className="bg-white hover:bg-slate-50 text-slate-900 px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 transition-colors"
+                      >
+                        <Share2 size={12} strokeWidth={2.5} />
+                        Share
+                      </button>
+                      
+                      <button 
+                        onClick={async (e) => { 
+                          e.stopPropagation();
+                          const blob = await getCroppedBlob();
+                          if (blob) {
+                            const downloadUrl = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = downloadUrl;
+                            a.download = `kanuka-clip-${epaper.date}.jpg`;
+                            a.click();
+                            URL.revokeObjectURL(downloadUrl);
+                          }
+                        }}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 transition-colors border-l border-white/10"
+                      >
+                        <Download size={12} strokeWidth={2.5} />
+                        Save
+                      </button>
+
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setIsCropping(false); setCrop(undefined); setCompletedCrop(undefined); }}
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 transition-colors border-l border-white/10"
+                      >
+                        <X size={12} strokeWidth={2.5} />
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </ReactCrop>
              </div>
           ) : (
@@ -257,121 +330,55 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
         </div>
       </footer>
 
-      {isCropping && completedCrop && (completedCrop.width || 0) > 5 && (
-        <div className="fixed bottom-0 left-0 right-0 z-[120] bg-white border-t border-indigo-100 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] no-zoom animate-in slide-in-from-bottom-full safe-pb flex items-center justify-between px-6 py-4">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Selection Active</span>
-              <p className="text-[9px] font-bold text-slate-400">Ready to share or save</p>
-            </div>
-            
-            <div className="flex items-center gap-2 sm:gap-4">
-              <button 
-                onClick={async (e) => { 
-                  const btn = e.currentTarget;
-                  const originalText = btn.innerText;
-                  btn.disabled = true;
-                  btn.innerText = "...";
+      {/* Share Modal Overlay */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowShareModal(false)} />
+          <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 relative z-10">
+            <div className="p-8 pb-4">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 leading-tight">Share Clip</h3>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Select Platform</p>
+                </div>
+                <button onClick={() => setShowShareModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                  <X size={20} className="text-slate-400" />
+                </button>
+              </div>
 
-                  try {
-                    const coords = getCropCoords();
-                    if (!coords) return;
-                    const baseUrl = window.location.origin;
-                    const params = new URLSearchParams({
-                      url: epaper.imageUrls[currentPage],
-                      x: coords.sx.toString(),
-                      y: coords.sy.toString(),
-                      w: coords.sw.toString(),
-                      h: coords.sh.toString(),
-                      title: epaper.title,
-                      edition: epaper.edition,
-                      date: epaper.date,
-                      page: (currentPage + 1).toString()
-                    });
-                    const shareUrl = `${baseUrl}/clip?${params.toString()}`;
-                    const blob = await getCroppedBlob();
-                    
-                    if (!blob) {
-                      if (navigator.share) await navigator.share({ title: epaper.title, url: shareUrl });
-                      else { await navigator.clipboard.writeText(shareUrl); alert("Link copied!"); }
-                      return;
-                    }
+              {shareData.blob && (
+                <div className="aspect-video w-full bg-slate-100 rounded-3xl mb-8 overflow-hidden border border-slate-100 shadow-inner">
+                  <img src={URL.createObjectURL(shareData.blob)} alt="Preview" className="w-full h-full object-contain" />
+                </div>
+              )}
 
-                    const file = new File([blob], "kanuka-clip.jpg", { type: "image/jpeg" });
-                    
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                      await navigator.share({
-                        title: epaper.title,
-                        text: `Check out this news from Kanuka E-Newspaper`,
-                        url: shareUrl,
-                        files: [file]
-                      });
-                    } else if (navigator.share) {
-                      await navigator.share({ title: epaper.title, url: shareUrl });
-                    } else {
-                      await navigator.clipboard.writeText(shareUrl);
-                      alert("Share link copied to clipboard!");
-                    }
-                  } catch (err) { } finally {
-                    btn.disabled = false;
-                    btn.innerText = originalText;
-                  }
-                }} 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-5 py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none disabled:opacity-50"
-              >
-                SHARE
-              </button>
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                 <SocialBtn 
+                   color="bg-[#25D366]" 
+                   label="WhatsApp" 
+                   onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Check out this news from Kanuka E-Newspaper: ' + shareData.url)}`)} 
+                 />
+                 <SocialBtn 
+                   color="bg-[#1877F2]" 
+                   label="Facebook" 
+                   onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`)} 
+                 />
+              </div>
 
               <button 
-                onClick={async () => { 
-                  const coords = getCropCoords();
-                  if (!coords) return;
-                  const baseUrl = window.location.origin;
-                  const params = new URLSearchParams({
-                    url: epaper.imageUrls[currentPage],
-                    x: coords.sx.toString(),
-                    y: coords.sy.toString(),
-                    w: coords.sw.toString(),
-                    h: coords.sh.toString(),
-                    title: epaper.title,
-                    edition: epaper.edition,
-                    date: epaper.date,
-                    page: (currentPage + 1).toString()
-                  });
-                  const shareUrl = `${baseUrl}/clip?${params.toString()}`;
-                  await navigator.clipboard.writeText(shareUrl);
-                  alert("Link copied to clipboard!");
-                }} 
-                className="bg-slate-800 hover:bg-slate-900 text-white px-3 sm:px-5 py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none"
+                onClick={async () => {
+                   await navigator.clipboard.writeText(shareData.url);
+                   alert("Link copied to clipboard!");
+                }}
+                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-200 active:scale-95 transition-all mb-4"
               >
-                COPY LINK
-              </button>
-
-              <button 
-                onClick={async (e) => { 
-                  const btn = e.currentTarget;
-                  btn.disabled = true;
-                  const blob = await getCroppedBlob();
-                  if (blob) {
-                    const downloadUrl = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.download = `kanuka-clip-${epaper.date}.jpg`;
-                    a.click();
-                    URL.revokeObjectURL(downloadUrl);
-                  }
-                  btn.disabled = false;
-                }} 
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-5 py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none disabled:opacity-50"
-              >
-                SAVE
-              </button>
-              <button 
-                onClick={() => { setIsCropping(false); setCrop(undefined); setCompletedCrop(undefined); }}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-500 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl shadow-sm transition-all"
-              >
-                <X size={14} />
+                Copy Share Link
               </button>
             </div>
+            <div className="bg-slate-50 p-4 text-center">
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Stateless Image Sharing Enabled</p>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -386,6 +393,17 @@ function ToolBtn({ onClick, icon, label, active = false }: { onClick: () => void
         {React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}
       </div>
       <span className="text-[10px] font-black uppercase tracking-tighter">{label}</span>
+    </button>
+  );
+}
+
+function SocialBtn({ color, label, onClick }: { color: string, label: string, onClick: () => void }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`w-full ${color} text-white p-4 rounded-2xl flex flex-col items-center gap-2 shadow-lg hover:brightness-110 active:scale-95 transition-all`}
+    >
+      <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
     </button>
   );
 }
