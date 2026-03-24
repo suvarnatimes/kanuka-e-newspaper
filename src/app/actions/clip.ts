@@ -39,7 +39,7 @@ export async function saveClip(params: SaveClipParams) {
     ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
 
     // Encode cropped image to JPEG
-    const resultBuffer = await canvas.encode("jpeg", 90);
+    const resultBuffer = await canvas.encode("jpeg", 85);
     const clipId = uuidv4();
     const clipKey = `clips/${clipId}.jpg`;
 
@@ -67,7 +67,7 @@ export async function saveClip(params: SaveClipParams) {
     return { 
       success: true, 
       clipId: clip._id.toString(),
-      shareUrl: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/clip/${clip._id}`
+      shareUrl: `/clip/${clip._id}`
     };
 
   } catch (error: any) {

@@ -96,9 +96,15 @@ export default async function ClipPage({ params }: ClipPageProps) {
               <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest text-center">Clip Actions</h2>
               
               <div className="space-y-3">
-                <a href={clip.clipUrl} download={`kanuka_clip_${id}.jpg`} className="flex items-center justify-center gap-3 w-full bg-slate-900 hover:bg-black text-white py-4 rounded-3xl font-black text-sm transition-all shadow-lg active:scale-95">
-                  <Download size={20} /> Save Image
-                </a>
+                <button 
+                  onClick={() => {
+                    const downloadUrl = `/api/download?url=${encodeURIComponent(clip.clipUrl)}&w=800&h=800`; // Filename is handled by API
+                    window.open(downloadUrl, '_blank');
+                  }}
+                  className="flex items-center justify-center gap-3 w-full bg-slate-900 hover:bg-black text-white py-4 rounded-3xl font-black text-sm transition-all shadow-lg active:scale-95"
+                >
+                  <Download size={20} /> Save to Gallery
+                </button>
                 <button 
                   onClick={() => { window.print(); }}
                   className="flex items-center justify-center gap-3 w-full bg-white hover:bg-slate-50 text-slate-700 border-2 border-slate-100 py-4 rounded-3xl font-black text-sm transition-all active:scale-95"
@@ -108,13 +114,24 @@ export default async function ClipPage({ params }: ClipPageProps) {
               </div>
 
               <div className="pt-4 border-t border-slate-100 space-y-4">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Share this part</p>
-                <div className="flex justify-center gap-4">
-                  <a href={`https://wa.me/?text=${encodeURIComponent(`${clip.epaperTitle}: ${clip.edition} edition - ${formattedDate}\nRead more: `)}${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`} target="_blank" className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all">
-                    <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.27 9.27 0 01-4.487-1.159l-.322-.19-3.338.876.891-3.256-.208-.332A9.282 9.282 0 012.25 9.354c0-5.118 4.158-9.276 9.276-9.276 2.479 0 4.808.965 6.551 2.71a9.214 9.214 0 012.723 6.561c0 5.117-4.158 9.275-9.276 9.275z"/></svg>
-                  </a>
-                  <button onClick={() => { if (typeof window !== 'undefined') navigator.share({ title: clip.epaperTitle, url: window.location.href }); }} className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all">
-                    <Share2 size={24} />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Share This Article</p>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => {
+                      const text = `${clip.epaperTitle}: ${clip.edition} edition - ${formattedDate}\n\nRead more at: `;
+                      const url = typeof window !== 'undefined' ? window.location.href : '';
+                      window.open(`https://wa.me/?text=${encodeURIComponent(text + url)}`, '_blank');
+                    }}
+                    className="flex items-center justify-center gap-3 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-3xl font-black text-sm transition-all shadow-lg active:scale-95"
+                  >
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.27 9.27 0 01-4.487-1.159l-.322-.19-3.338.876.891-3.256-.208-.332A9.282 9.282 0 012.25 9.354c0-5.118 4.158-9.276 9.276-9.276 2.479 0 4.808.965 6.551 2.71a9.214 9.214 0 012.723 6.561c0 5.117-4.158 9.275-9.276 9.275z"/></svg>
+                    Send on WhatsApp
+                  </button>
+                  <button 
+                    onClick={() => { if (typeof window !== 'undefined') navigator.share({ title: clip.epaperTitle, url: window.location.href }); }}
+                    className="flex items-center justify-center gap-3 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 py-4 rounded-3xl font-black text-sm transition-all active:scale-95"
+                  >
+                    <Share2 size={20} /> Other Share Options
                   </button>
                 </div>
               </div>

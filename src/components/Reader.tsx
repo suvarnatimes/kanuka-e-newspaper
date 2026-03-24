@@ -182,15 +182,15 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
             <>
               <button 
                 onClick={(e) => { e.stopPropagation(); currentPage > 0 && setCurrentPage(c => c - 1); }} 
-                className="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2.5 bg-white/2 hover:bg-white/20 active:bg-indigo-600/30 backdrop-blur-md rounded-2xl border border-white/10 text-white/40 hover:text-white transition-all shadow-xl disabled:opacity-0 no-zoom"
+                className="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 p-1 sm:p-1.5 bg-transparent hover:bg-white/5 active:bg-indigo-600/20 backdrop-blur-none sm:backdrop-blur-sm rounded-xl border border-white/5 text-white/20 hover:text-white/60 transition-all shadow-none z-[60] no-zoom"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={16} />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); currentPage < totalPages - 1 && setCurrentPage(c => c + 1); }} 
-                className="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1.5 sm:p-2.5 bg-white/2 hover:bg-white/20 active:bg-indigo-600/30 backdrop-blur-md rounded-2xl border border-white/10 text-white/40 hover:text-white transition-all shadow-xl disabled:opacity-0 no-zoom"
+                className="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1 sm:p-1.5 bg-transparent hover:bg-white/5 active:bg-indigo-600/20 backdrop-blur-none sm:backdrop-blur-sm rounded-xl border border-white/5 text-white/20 hover:text-white/60 transition-all shadow-none z-[60] no-zoom"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={16} />
               </button>
             </>
           )}
@@ -246,15 +246,19 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                 onClick={async () => { 
                   if (shareUrlReady) {
                     if (navigator.share) {
-                      await navigator.share({
-                        title: epaper.title,
-                        text: `Read this article from Kanuka E-Newspaper`,
-                        url: shareUrlReady
-                      });
-                      setIsCropping(false);
-                      setShareUrlReady(null);
-                      setCrop(undefined);
-                      setCompletedCrop(undefined);
+                      try {
+                        await navigator.share({
+                          title: epaper.title,
+                          text: `Check out this article from Kanuka E-Newspaper`,
+                          url: shareUrlReady
+                        });
+                        setIsCropping(false);
+                        setShareUrlReady(null);
+                        setCrop(undefined);
+                        setCompletedCrop(undefined);
+                      } catch (err) {
+                        // User cancelled or share failed, stay on page
+                      }
                     } else {
                       await navigator.clipboard.writeText(shareUrlReady);
                       alert("Share link copied to clipboard!");
@@ -290,37 +294,27 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                     }
                   } catch (err: any) {
                     console.error("Save Clip Failed:", err);
-                    alert("Failed to generate share link. Saving image instead.");
-                    const blobToSave = clipBlob || (await getCroppedCanvas())?.blob;
-                    if (blobToSave) {
-                        const url = URL.createObjectURL(blobToSave); 
-                        const a = document.createElement('a'); a.download = `kanuka_clip.jpg`; a.href = url; a.click(); URL.revokeObjectURL(url); 
-                    }
+                    alert("Generating share link failed. Please try saving instead.");
                   } finally {
                     setIsProcessing(false);
                   }
                 }} 
                 disabled={isProcessing}
-                className={`${shareUrlReady ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none ${isProcessing ? 'opacity-50 cursor-wait' : ''}`}
+                className={`${shareUrlReady ? 'bg-emerald-600 hover:bg-emerald-700 animate-pulse' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none ${isProcessing ? 'opacity-50 cursor-wait' : ''}`}
               >
                 {isProcessing ? 'GENERATING...' : (shareUrlReady ? 'SHARE NOW' : 'SHARE CLIP')}
               </button>
               <button 
-                onClick={async () => { 
-                  const blobToSave = clipBlob || (await getCroppedCanvas())?.blob;
-                  if (blobToSave) { 
-                    const url = URL.createObjectURL(blobToSave); 
-                    const a = document.createElement('a'); 
-                    a.download = `kanuka_clip.jpg`; 
-                    a.href = url; 
-                    a.click(); 
-                    URL.revokeObjectURL(url); 
-                  } 
+                onClick={() => { 
+                  const coords = getCropCoords();
+                  if (coords) {
+                     const downloadUrl = `/api/download?url=${encodeURIComponent(epaper.imageUrls[currentPage])}&x=${coords.sx}&y=${coords.sy}&w=${coords.sw}&h=${coords.sh}`;
+                     window.open(downloadUrl, '_blank');
+                  }
                 }} 
-                disabled={isProcessing && !clipBlob}
-                className={`bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none ${isProcessing && !clipBlob ? 'opacity-50 cursor-wait' : ''}`}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black shadow-lg transition-all flex-1 sm:flex-none"
               >
-                {isProcessing && !clipBlob ? '...' : 'SAVE'}
+                SAVE
               </button>
               <button 
                 onClick={() => { setIsCropping(false); setCrop(undefined); setCompletedCrop(undefined); setShareUrlReady(null); }}
