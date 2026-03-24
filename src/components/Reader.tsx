@@ -104,16 +104,21 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
       if (!ctx) return null;
 
       // Use a cache-busting query to avoid cached responses without CORS
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = epaper.imageUrls[currentPage];
+      // Fetch as blob to handle CORS more reliably and use a same-origin Object URL
+      const response = await fetch(epaper.imageUrls[currentPage], { mode: 'cors' });
+      if (!response.ok) throw new Error(`Image fetch failed: ${response.status} ${response.statusText}`);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
       
+      const img = new Image();
       await new Promise((resolve, reject) => {
         img.onload = resolve;
-        img.onerror = (e) => reject(new Error("Image load failed for canvas"));
+        img.onerror = () => reject(new Error("Image decoding failed"));
+        img.src = objectUrl;
       });
-
+      
       ctx.drawImage(img, coords.sx, coords.sy, coords.sw, coords.sh, 0, 0, coords.sw, coords.sh);
+      URL.revokeObjectURL(objectUrl);
       
       return new Promise((resolve) => {
         canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
