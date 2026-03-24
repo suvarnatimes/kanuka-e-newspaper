@@ -172,11 +172,11 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
           {isCropping ? (
              <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
                 <ReactCrop crop={crop} onChange={c => setCrop(c)} onComplete={c => setCompletedCrop(c)} className="w-full h-full flex items-center justify-center">
-                  <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} crossOrigin="anonymous" alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
+                  <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
                 </ReactCrop>
              </div>
           ) : (
-             <img src={epaper.imageUrls[currentPage]} crossOrigin="anonymous" alt={`Page ${currentPage + 1}`} className="w-full h-auto object-contain select-none shadow-2xl rounded-lg" draggable={false} />
+             <img src={epaper.imageUrls[currentPage]} alt={`Page ${currentPage + 1}`} className="w-full h-auto object-contain select-none shadow-2xl rounded-lg" draggable={false} />
           )}
 
           {zoom <= 1 && !isCropping && (
