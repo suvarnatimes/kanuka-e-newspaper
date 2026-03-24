@@ -37,12 +37,17 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const onTouchStart = (e: React.TouchEvent) => {
-    if (zoom > 1 || isCropping) return; 
+    // Only allow single-finger swipes for page turns
+    // Also block if zooming or cropping
+    if (e.touches.length !== 1 || zoom > 1 || isCropping) return; 
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
   };
   const onTouchEnd = (e: React.TouchEvent) => {
     if (zoom > 1 || isCropping) return;
+    // Ensure we are ending a single-finger gesture
+    if (e.changedTouches.length !== 1) return;
+    
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
     if (Math.abs(dx) > 50 && dy < 80) {
@@ -222,7 +227,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                 </div>
              </div>
 
-             <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-3 py-1.5 shadow-sm">
+             <div className="hidden lg:flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-3 py-1.5 shadow-sm">
                 <button onClick={() => handleZoom('out')} className="text-slate-400 hover:text-indigo-600 transition-all p-1"><Minus size={16} strokeWidth={3} /></button>
                 <span className="text-[10px] font-black text-slate-500 min-w-[35px] text-center tabular-nums">{Math.round(zoom * 100)}%</span>
                 <button onClick={() => handleZoom('in')} className="text-slate-400 hover:text-indigo-600 transition-all p-1"><Plus size={16} strokeWidth={3} /></button>
@@ -230,7 +235,9 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-4 flex-1 justify-end">
-            <ToolBtn onClick={() => zoom !== 1 ? setZoom(1) : handleZoom('in')} icon={<ZoomIn size={20} strokeWidth={1.5} />} label={zoom !== 1 ? 'RESET' : 'ZOOM'} active={zoom !== 1} />
+            <div className="hidden lg:block">
+              <ToolBtn onClick={() => zoom !== 1 ? setZoom(1) : handleZoom('in')} icon={<ZoomIn size={20} strokeWidth={1.5} />} label={zoom !== 1 ? 'RESET' : 'ZOOM'} active={zoom !== 1} />
+            </div>
             <ToolBtn onClick={async () => { 
                 const baseUrl = window.location.origin;
                 const path = window.location.pathname;
