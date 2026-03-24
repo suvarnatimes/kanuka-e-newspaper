@@ -10,6 +10,7 @@ type Epaper = {
   title: string;
   date: string;
   edition: string;
+  state: 'Andhra Pradesh' | 'Telangana';
   imageUrls: string[];
   pdfUrl: string;
 };

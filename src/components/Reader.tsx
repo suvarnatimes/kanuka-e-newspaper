@@ -283,7 +283,7 @@ function ToolBtn({ onClick, icon, label, active = false }: { onClick: () => void
   return (
     <button onClick={onClick} className={`flex flex-col items-center gap-2 p-3 group transition-all active:scale-90 ${active ? 'text-indigo-600 translate-y-[-4px]' : 'text-slate-400 hover:text-indigo-600'}`}>
       <div className={`${active ? 'bg-indigo-50 p-2 rounded-xl' : ''} transition-all`}>
-        {React.cloneElement(icon as React.ReactElement, { size: 20 })}
+        {React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}
       </div>
       <span className="text-[10px] font-black uppercase tracking-tighter">{label}</span>
     </button>
