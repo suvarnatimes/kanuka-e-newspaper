@@ -1,13 +1,6 @@
 import { Epaper } from '@/lib/models/Epaper';
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
 import { connectToDatabase } from "@/lib/mongodb";
-import { r2Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/r2";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { processPdfToWebP } from "@/lib/pdfProcessor";
-import { v4 as uuidv4 } from "uuid";
-
-const MONGODB_URI = process.env.MONGODB_URI!;
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
