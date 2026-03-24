@@ -24,17 +24,24 @@ export async function startEpaperUpload(formData: FormData) {
     
     // 1. Upload Original PDF (First step for any new/replaced publication)
     const pdfBuffer = Buffer.from(await file.arrayBuffer());
-    await r2Client.send(new PutObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: pdfKey,
-      Body: pdfBuffer,
-      ContentType: "application/pdf"
-    }));
+    console.log(`>>> uploading PDF to R2: ${pdfKey} (${pdfBuffer.length} bytes)`);
+    
+    try {
+      await r2Client.send(new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: pdfKey,
+        Body: pdfBuffer,
+        ContentType: "application/pdf"
+      }));
+    } catch (r2Err: any) {
+      console.error(">>> R2 Upload Failed:", r2Err);
+      throw new Error(`Cloud Storage Error: ${r2Err.message || 'Unknown R2 error'}`);
+    }
 
+    console.log(">>> connecting to database...");
     await connectToDatabase();
     
     // Create or Update Record Placeholder
-    // We'll store the R2 base path in a temporary field if needed or just use the ID
     const epaper = new Epaper({
       title,
       date,
@@ -45,11 +52,12 @@ export async function startEpaperUpload(formData: FormData) {
     });
 
     await epaper.save();
+    console.log(`>>> Epaper saved to DB: ${epaper._id}`);
     
     return { success: true, epaperId: epaper._id.toString(), fileId, datePath };
   } catch (error: any) {
     console.error(">>> [ERROR] startEpaperUpload failed:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: `Server Error: ${error.message || 'Unknown error occured'}` };
   }
 }
 
