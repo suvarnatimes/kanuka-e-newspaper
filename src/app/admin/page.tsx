@@ -156,7 +156,7 @@ export default function AdminPage() {
               setRenderProgress(prev => ({ ...prev, current: i }));
               
               const page = await pdf.getPage(i);
-              const viewport = page.getViewport({ scale: 2.0 }); // High Quality Scale
+              const viewport = page.getViewport({ scale: 3.0 }); // Ultra HD Scale
               const canvas = document.createElement('canvas');
               const context = canvas.getContext('2d');
               canvas.height = viewport.height;
@@ -165,7 +165,7 @@ export default function AdminPage() {
               await page.render({ canvasContext: context!, viewport }).promise;
 
               const blob = await new Promise<Blob>((resolve) => {
-                  canvas.toBlob((b) => resolve(b!), 'image/webp', 0.85); // High Quality WebP
+                  canvas.toBlob((b) => resolve(b!), 'image/webp', 0.9); // Ultra HD WebP
               });
 
               // @ts-ignore
