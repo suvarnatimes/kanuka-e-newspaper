@@ -268,6 +268,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                     onChange={c => setCrop(c)} 
                     onComplete={c => setCompletedCrop(c)}
                     className="w-full h-full flex items-center justify-center font-sans"
+                    style={{ "--rc-mask-color": "rgba(0, 0, 0, 0.85)" } as any}
                     renderSelectionAddon={() => (
                       <div 
                         className="absolute left-0 -top-10 z-[200] flex items-center gap-px overflow-hidden rounded-lg shadow-2xl border border-white/20 no-zoom"
@@ -277,25 +278,20 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                           onClick={async (e) => { 
                             e.stopPropagation();
                             setIsSharing(true);
-                            const blob = await getCroppedBlob();
-                            if (!blob) {
+                            try {
+                              const blob = await getCroppedBlob();
+                              if (!blob) throw new Error("Capture failed");
+                              
+                              const url = await ensurePersistentClip(blob);
+                              if (!url) throw new Error("Persistence failed");
+                              
+                              setShareData({ url: url, blob: blob });
+                              setShowShareModal(true);
+                            } catch (err: any) {
+                              alert(err.message || "Failed to share clip.");
+                            } finally {
                               setIsSharing(false);
-                              alert("Capture failed. Please try again.");
-                              return;
                             }
-                            
-                            const url = await ensurePersistentClip(blob);
-                            if (!url) {
-                              setIsSharing(false);
-                              alert("Failed to save clip. Please try again.");
-                              return;
-                            }
-                            
-                            setShareData({
-                               url: url,
-                               blob: blob
-                            });
-                            setShowShareModal(true);
                           }}
                           disabled={isSharing}
                           className={`bg-white hover:bg-slate-50 text-slate-900 px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors whitespace-nowrap ${isSharing ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -308,24 +304,23 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                           onClick={async (e) => { 
                             e.stopPropagation();
                             setIsSharing(true);
-                            const blob = await getCroppedBlob();
-                            if (!blob) {
+                            try {
+                              const blob = await getCroppedBlob();
+                              if (!blob) throw new Error("Capture failed");
+                              
+                              const url = await ensurePersistentClip(blob);
+                              if (!url) throw new Error("Persistence failed");
+
+                              const a = document.createElement('a');
+                              a.href = url; // Now using the permanent directory link for the download icon
+                              a.target = "_blank";
+                              a.download = `kanuka-clip-${epaper.date}.jpg`;
+                              a.click();
+                            } catch (err: any) {
+                              alert(err.message || "Failed to save clip.");
+                            } finally {
                               setIsSharing(false);
-                              alert("Capture failed. Please try again.");
-                              return;
                             }
-                            const url = await ensurePersistentClip(blob);
-                            if (url) {
-                               const localUrl = URL.createObjectURL(blob);
-                               const a = document.createElement('a');
-                               a.href = localUrl;
-                               a.download = `kanuka-clip-${epaper.date}.jpg`;
-                               a.click();
-                               URL.revokeObjectURL(localUrl);
-                            } else {
-                               alert("Failed to save clip. Please try again.");
-                            }
-                            setIsSharing(false);
                           }}
                           disabled={isSharing}
                           className={`bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors border-l border-white/10 whitespace-nowrap ${isSharing ? 'opacity-50 cursor-not-allowed' : ''}`}
