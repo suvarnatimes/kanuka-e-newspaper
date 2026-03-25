@@ -359,13 +359,13 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                   <div ref={pinchTargetRef} className="w-full h-full flex items-center justify-center origin-center transition-all duration-300">
                     {/* @ts-ignore */}
                     <HTMLPageFlip
-                      width={550}
-                      height={800}
+                      width={650}
+                      height={950}
                       size="stretch"
                       minWidth={315}
-                      maxWidth={1000}
+                      maxWidth={1400}
                       minHeight={400}
-                      maxHeight={1533}
+                      maxHeight={2000}
                       maxShadowOpacity={0.5}
                       showCover={false}
                       mobileScrollSupport={true}
