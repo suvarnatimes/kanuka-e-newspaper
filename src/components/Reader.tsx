@@ -261,12 +261,12 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
             className={`w-full h-full ${isDesktop ? 'p-10' : 'p-0'} flex items-start justify-center overflow-auto custom-scrollbar`}
           >
             {isCropping ? (
-               <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
+               <div className="w-full h-auto animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
                   <ReactCrop 
                     crop={crop} 
                     onChange={c => setCrop(c)} 
                     onComplete={c => setCompletedCrop(c)}
-                    className="w-full h-full flex items-start justify-center font-sans"
+                    className="w-full h-auto flex items-start justify-center font-sans"
                     style={{ "--rc-mask-color": "rgba(0, 0, 0, 0.85)" } as any}
                     renderSelectionAddon={() => (
                       <div 
