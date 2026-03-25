@@ -31,13 +31,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, x, y, w, h, date, edition } = await req.json();
+    const formData = await req.formData();
+    const imageFile = formData.get("file") as File;
+    const date = formData.get("date") as string;
+    const edition = formData.get("edition") as string;
 
-    if (!imageUrl || !w || !h) {
-      return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
+    if (!imageFile) {
+      return NextResponse.json({ error: "Missing image file" }, { status: 400 });
     }
 
-    const resultBuffer = await cropImage(imageUrl, x, y, w, h);
+    const buffer = Buffer.from(await imageFile.arrayBuffer());
 
     // Generate permanent key
     const timestamp = Date.now();
@@ -48,7 +51,7 @@ export async function POST(req: NextRequest) {
     const uploadCommand = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: key,
-      Body: resultBuffer,
+      Body: buffer,
       ContentType: "image/jpeg",
     });
 
@@ -58,7 +61,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: publicUrl });
 
   } catch (error: any) {
-    console.error("Clipping API POST Failure:", error);
+    console.error("Clipping API Direct Upload Failure:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -174,26 +174,20 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
     return false;
   };
 
-  const ensurePersistentClip = async () => {
+  const ensurePersistentClip = async (blob: Blob | null) => {
     if (currentClipUrl) return currentClipUrl;
-    
-    const coords = getCropCoords();
-    if (!coords) return null;
+    if (!blob) return null;
     
     setIsSharing(true);
     try {
+      const formData = new FormData();
+      formData.append('file', blob, `clip-${epaper.date}.jpg`);
+      formData.append('date', epaper.date);
+      formData.append('edition', epaper.edition);
+
       const response = await fetch('/api/clip', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageUrl: epaper.imageUrls[currentPage],
-          x: coords.sx,
-          y: coords.sy,
-          w: coords.sw,
-          h: coords.sh,
-          date: epaper.date,
-          edition: epaper.edition
-        })
+        body: formData,
       });
       
       if (!response.ok) throw new Error("Persistence failed");
@@ -282,13 +276,21 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                         <button 
                           onClick={async (e) => { 
                             e.stopPropagation();
-                            const url = await ensurePersistentClip();
+                            setIsSharing(true);
+                            const blob = await getCroppedBlob();
+                            if (!blob) {
+                              setIsSharing(false);
+                              alert("Capture failed. Please try again.");
+                              return;
+                            }
+                            
+                            const url = await ensurePersistentClip(blob);
                             if (!url) {
+                              setIsSharing(false);
                               alert("Failed to save clip. Please try again.");
                               return;
                             }
                             
-                            const blob = await getCroppedBlob();
                             setShareData({
                                url: url,
                                blob: blob
@@ -305,20 +307,25 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                         <button 
                           onClick={async (e) => { 
                             e.stopPropagation();
-                            const url = await ensurePersistentClip();
+                            setIsSharing(true);
+                            const blob = await getCroppedBlob();
+                            if (!blob) {
+                              setIsSharing(false);
+                              alert("Capture failed. Please try again.");
+                              return;
+                            }
+                            const url = await ensurePersistentClip(blob);
                             if (url) {
-                               const blob = await getCroppedBlob();
-                               if (blob) {
-                                 const localUrl = URL.createObjectURL(blob);
-                                 const a = document.createElement('a');
-                                 a.href = localUrl;
-                                 a.download = `kanuka-clip-${epaper.date}.jpg`;
-                                 a.click();
-                                 URL.revokeObjectURL(localUrl);
-                               }
+                               const localUrl = URL.createObjectURL(blob);
+                               const a = document.createElement('a');
+                               a.href = localUrl;
+                               a.download = `kanuka-clip-${epaper.date}.jpg`;
+                               a.click();
+                               URL.revokeObjectURL(localUrl);
                             } else {
                                alert("Failed to save clip. Please try again.");
                             }
+                            setIsSharing(false);
                           }}
                           disabled={isSharing}
                           className={`bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors border-l border-white/10 whitespace-nowrap ${isSharing ? 'opacity-50 cursor-not-allowed' : ''}`}
