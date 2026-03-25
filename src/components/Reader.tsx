@@ -270,7 +270,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
           className={`flex-1 overflow-hidden bg-slate-100/30 flex items-center justify-center transition-all duration-300 relative`}
         >
           <div 
-            className="w-full h-full p-2 flex items-center justify-center"
+            className="w-full h-full lg:p-0 p-2 flex items-center justify-center"
           >
             {isCropping ? (
                <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
@@ -359,13 +359,13 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                   <div ref={pinchTargetRef} className="w-full h-full flex items-center justify-center origin-center transition-all duration-300">
                     {/* @ts-ignore */}
                     <HTMLPageFlip
-                      width={650}
-                      height={950}
+                      width={800}
+                      height={1150}
                       size="stretch"
                       minWidth={315}
-                      maxWidth={1400}
+                      maxWidth={2500}
                       minHeight={400}
-                      maxHeight={2000}
+                      maxHeight={3500}
                       maxShadowOpacity={0.5}
                       showCover={false}
                       mobileScrollSupport={true}
