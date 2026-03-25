@@ -384,13 +384,6 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
 
     <footer className="shrink-0 bg-white border-t border-slate-200 z-[100] safe-pb pb-1 shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-center gap-0.5 sm:gap-4 lg:gap-6 px-2 py-1 bg-white no-zoom overflow-x-auto custom-scrollbar">
-          {/* Action icon (leftmost) */}
-          <div className="hidden sm:flex items-center">
-            <button className="p-2 text-slate-700 bg-slate-100 rounded-full active:scale-95 transition-all outline-none">
-               <Newspaper size={20} strokeWidth={2.5} />
-            </button>
-          </div>
-
           <ToolBtn onClick={() => { setIsCropping(!isCropping); setCrop(undefined); if (!isCropping) handleZoomOut(); }} icon={<Scissors size={20} strokeWidth={1.5} />} label="CLIP" active={isCropping} />
           <ToolBtn onClick={() => setShowDatePicker(!showDatePicker)} icon={<Calendar size={20} />} label="ARCH" active={showDatePicker} />
           
