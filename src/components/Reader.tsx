@@ -239,7 +239,6 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                   onClick={() => {
                      setCurrentPage(i);
                      handleZoomOut();
-                     if (flipRef.current) flipRef.current.pageFlip().turnToPage(i);
                   }}
                   className={`w-full group focus:outline-none transition-all ${currentPage === i ? 'ring-2 ring-indigo-600 rounded-lg p-1' : 'opacity-70 hover:opacity-100'}`}
                 >
