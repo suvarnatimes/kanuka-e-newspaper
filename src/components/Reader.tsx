@@ -8,6 +8,7 @@ import 'react-day-picker/dist/style.css';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import HTMLPageFlip from 'react-pageflip';
+import QuickPinchZoom, { make3dTransformValue } from 'react-quick-pinch-zoom';
 
 interface ReaderProps {
   epaper: {
@@ -34,8 +35,18 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const cropImgRef = useRef<HTMLImageElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<any>(null);
+  const pinchZoomRef = useRef<any>(null);
+  const pinchTargetRef = useRef<HTMLDivElement>(null);
 
   const totalPages = epaper.imageUrls.length;
+
+  const onUpdate = React.useCallback(({ x, y, scale }: { x: number, y: number, scale: number }) => {
+    const el = pinchTargetRef.current;
+    if (el) {
+      el.style.setProperty('transform', make3dTransformValue({ x, y, scale }));
+    }
+    setZoom(scale);
+  }, []);
 
   // Swipe detection for page turns
   const touchStartX = useRef(0);
@@ -242,34 +253,49 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                 </ReactCrop>
              </div>
           ) : (
-            /* @ts-ignore */
-            <HTMLPageFlip
-              width={550}
-              height={800}
-              size="stretch"
-              minWidth={315}
-              maxWidth={1000}
-              minHeight={400}
-              maxHeight={1533}
-              maxShadowOpacity={0.5}
-              showCover={false}
-              mobileScrollSupport={true}
-              onFlip={(e: any) => setCurrentPage(e.data)}
-              className="page-flip-container shadow-2xl rounded-lg mx-auto"
-              style={{ display: 'block' }}
-              useMouseEvents={zoom === 1 && !isCropping}
-              startPage={currentPage}
-              ref={flipRef}
-              usePortrait={true}
-              showPageCorners={true}
-              disableFlipByClick={false}
-            >
-              {epaper.imageUrls.map((url, i) => (
-                <div key={i} className="page shadow-inner bg-white flex items-center justify-center overflow-hidden">
-                  <img src={url} alt={`Page ${i + 1}`} className="w-full h-full object-contain pointer-events-none select-none" />
+            <div className={`w-full h-full ${zoom > 1 ? 'overflow-auto' : 'flex items-center justify-center'}`}>
+              <QuickPinchZoom
+                ref={pinchZoomRef}
+                onUpdate={onUpdate}
+                draggableUnZoomed={false}
+                enabled={!isCropping}
+                maxZoom={4}
+                minZoom={1}
+                tapZoomFactor={0}
+              >
+                <div ref={pinchTargetRef} className="w-full h-full flex items-center justify-center origin-center transition-all duration-300">
+                  {/* @ts-ignore */}
+                  <HTMLPageFlip
+                    width={550}
+                    height={800}
+                    size="stretch"
+                    minWidth={315}
+                    maxWidth={1000}
+                    minHeight={400}
+                    maxHeight={1533}
+                    maxShadowOpacity={0.5}
+                    showCover={false}
+                    mobileScrollSupport={true}
+                    onFlip={(e: any) => setCurrentPage(e.data)}
+                    className="page-flip-container shadow-2xl rounded-lg mx-auto"
+                    style={{ display: 'block' }}
+                    useMouseEvents={zoom === 1 && !isCropping}
+                    useTouchEvents={zoom === 1 && !isCropping}
+                    startPage={currentPage}
+                    ref={flipRef}
+                    usePortrait={true}
+                    showPageCorners={zoom === 1}
+                    disableFlipByClick={zoom > 1}
+                  >
+                    {epaper.imageUrls.map((url, i) => (
+                      <div key={i} className="page shadow-inner bg-white flex items-center justify-center overflow-hidden">
+                        <img src={url} alt={`Page ${i + 1}`} className="w-full h-full object-contain pointer-events-none select-none" />
+                      </div>
+                    ))}
+                  </HTMLPageFlip>
                 </div>
-              ))}
-            </HTMLPageFlip>
+              </QuickPinchZoom>
+            </div>
           )}
 
           {zoom <= 1 && !isCropping && (
