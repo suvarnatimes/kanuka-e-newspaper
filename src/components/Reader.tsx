@@ -175,142 +175,156 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   }, [currentPage, totalPages]);
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden relative font-sans">
-      <div className="flex items-center justify-between px-6 py-2 bg-white border-b border-slate-200 shrink-0 z-50">
-        <div className="flex items-center gap-4 overflow-hidden">
-          <div className="flex items-baseline gap-2 overflow-hidden px-1">
-            <h1 className="text-sm font-black text-slate-800 leading-tight uppercase tracking-tight truncate max-w-[140px] xs:max-w-[200px] sm:max-w-none">{epaper.title}</h1>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap opacity-80">{epaper.edition} · {format(parseISO(epaper.date), 'MMM do, yyyy')}</p>
-          </div>
-        </div>
-        <div className="bg-slate-100 px-3 py-1 rounded-xl border border-slate-200 shrink-0">
-           <span className="text-[10px] font-black text-slate-600 tabular-nums">{currentPage + 1} / {totalPages}</span>
-        </div>
+    <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden relative font-sans h-[100dvh]">
+      {/* Header - Prajabhoomi Desktop Style */}
+      <div className="bg-[#2D3436] px-4 py-3 flex items-center justify-start shrink-0 z-[100] shadow-md">
+        <div className="bg-[#FEC401] px-1 mr-4 hidden sm:block h-6 w-1"></div>
+        <h1 className="text-sm sm:text-lg font-black text-white uppercase tracking-tight">
+          {epaper.title}-{format(parseISO(epaper.date), 'dd-MM-yyyy')}-{epaper.edition} - Page {currentPage + 1}
+        </h1>
       </div>
 
-      <main 
-        ref={scrollRef}
-        className={`flex-1 overflow-auto bg-slate-100/50 flex items-start justify-center transition-all duration-300 ${zoom > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        onClick={(e) => {
-            const target = e.target as HTMLElement;
-            if (target.closest('button, select, .no-zoom') || isCropping) return;
-            setZoom(prev => prev !== 1 ? 1 : 1.5);
-        }}
-      >
-        <div 
-          className="relative transition-all duration-500 ease-out flex items-center justify-center p-2 min-h-full"
-          style={{ width: zoom >= 1 ? `${100 * zoom}%` : `${100 * zoom}%`, maxWidth: zoom > 1 ? 'none' : '1000px' }}
-        >
-          {isCropping ? (
-             <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
-                <ReactCrop 
-                  crop={crop} 
-                  onChange={c => setCrop(c)} 
-                  onComplete={c => setCompletedCrop(c)}
-                  className="w-full h-full flex items-center justify-center font-sans"
-                  renderSelectionAddon={() => (
-                    <div 
-                      className="absolute left-0 -top-10 z-[200] flex items-center gap-px overflow-hidden rounded-lg shadow-2xl border border-white/20 no-zoom"
-                      style={{ pointerEvents: 'auto' }}
-                    >
-                      <button 
-                        onClick={async (e) => { 
-                          e.stopPropagation();
-                          const blob = await getCroppedBlob();
-                          if (blob) {
-                            setShareData({
-                               url: window.location.href,
-                               blob: blob
-                            });
-                            setShowShareModal(true);
-                          }
-                        }}
-                        className="bg-white hover:bg-slate-50 text-slate-900 px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors whitespace-nowrap"
-                      >
-                        <Share2 size={12} strokeWidth={2.5} />
-                        Share
-                      </button>
-                      
-                      <button 
-                        onClick={async (e) => { 
-                          e.stopPropagation();
-                          const blob = await getCroppedBlob();
-                          if (blob) {
-                            const downloadUrl = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = downloadUrl;
-                            a.download = `kanuka-clip-${epaper.date}.jpg`;
-                            a.click();
-                            URL.revokeObjectURL(downloadUrl);
-                          }
-                        }}
-                        className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors border-l border-white/10 whitespace-nowrap"
-                      >
-                        <Download size={12} strokeWidth={2.5} />
-                        Save
-                      </button>
-
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setIsCropping(false); setCrop(undefined); setCompletedCrop(undefined); }}
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors border-l border-white/10 whitespace-nowrap"
-                      >
-                        <X size={12} strokeWidth={2.5} />
-                        Cancel
-                      </button>
-                    </div>
-                  )}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar - Desktop Thumbnail Strip */}
+        <aside className="hidden lg:flex w-64 bg-white border-r border-slate-200 flex-col shrink-0 overflow-y-auto custom-scrollbar shadow-inner">
+           <div className="p-4 space-y-6">
+              {epaper.imageUrls.map((url, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => {
+                     setCurrentPage(i);
+                     handleZoomOut();
+                     if (flipRef.current) flipRef.current.pageFlip().turnToPage(i);
+                  }}
+                  className={`w-full group focus:outline-none transition-all ${currentPage === i ? 'ring-2 ring-indigo-600 rounded-lg p-1' : 'opacity-70 hover:opacity-100'}`}
                 >
-                  <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
-                </ReactCrop>
-             </div>
-          ) : (
-            <div className={`w-full h-full ${zoom > 1 ? 'overflow-auto' : 'flex items-center justify-center'}`}>
-              <QuickPinchZoom
-                ref={pinchZoomRef}
-                onUpdate={onUpdate}
-                draggableUnZoomed={false}
-                enabled={!isCropping}
-                maxZoom={4}
-                minZoom={1}
-                tapZoomFactor={0}
-              >
-                <div ref={pinchTargetRef} className="w-full h-full flex items-center justify-center origin-center transition-all duration-300">
-                  {/* @ts-ignore */}
-                  <HTMLPageFlip
-                    width={550}
-                    height={800}
-                    size="stretch"
-                    minWidth={315}
-                    maxWidth={1000}
-                    minHeight={400}
-                    maxHeight={1533}
-                    maxShadowOpacity={0.5}
-                    showCover={false}
-                    mobileScrollSupport={true}
-                    onFlip={(e: any) => setCurrentPage(e.data)}
-                    className="page-flip-container shadow-2xl rounded-lg mx-auto"
-                    style={{ display: 'block' }}
-                    useMouseEvents={zoom === 1 && !isCropping}
-                    useTouchEvents={zoom === 1 && !isCropping}
-                    startPage={currentPage}
-                    ref={flipRef}
-                    display="single"
-                    usePortrait={true}
-                    showPageCorners={zoom === 1}
-                    disableFlipByClick={zoom > 1}
-                  >
-                    {epaper.imageUrls.map((url, i) => (
-                      <div key={i} className="page shadow-inner bg-white flex items-center justify-center overflow-hidden">
-                        <img src={url} alt={`Page ${i + 1}`} className="w-full h-full object-contain pointer-events-none select-none" />
+                   <div className="aspect-[3/4] bg-slate-100 rounded border border-slate-200 overflow-hidden mb-2 shadow-sm group-hover:shadow-md transition-shadow">
+                      <img src={url} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
+                   </div>
+                   <span className={`text-xs font-black uppercase tracking-widest ${currentPage === i ? 'text-indigo-600 font-black' : 'text-slate-500'}`}>
+                      Page {i + 1}
+                   </span>
+                </button>
+              ))}
+           </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <main 
+          ref={scrollRef}
+          className={`flex-1 overflow-hidden bg-slate-100/30 flex items-center justify-center transition-all duration-300 relative`}
+        >
+          <div 
+            className="w-full h-full p-2 flex items-center justify-center"
+          >
+            {isCropping ? (
+               <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
+                  <ReactCrop 
+                    crop={crop} 
+                    onChange={c => setCrop(c)} 
+                    onComplete={c => setCompletedCrop(c)}
+                    className="w-full h-full flex items-center justify-center font-sans"
+                    renderSelectionAddon={() => (
+                      <div 
+                        className="absolute left-0 -top-10 z-[200] flex items-center gap-px overflow-hidden rounded-lg shadow-2xl border border-white/20 no-zoom"
+                        style={{ pointerEvents: 'auto' }}
+                      >
+                        <button 
+                          onClick={async (e) => { 
+                            e.stopPropagation();
+                            const blob = await getCroppedBlob();
+                            if (blob) {
+                              setShareData({
+                                 url: window.location.href,
+                                 blob: blob
+                              });
+                              setShowShareModal(true);
+                            }
+                          }}
+                          className="bg-white hover:bg-slate-50 text-slate-900 px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                        >
+                          <Share2 size={12} strokeWidth={2.5} />
+                          Share
+                        </button>
+                        
+                        <button 
+                          onClick={async (e) => { 
+                            e.stopPropagation();
+                            const blob = await getCroppedBlob();
+                            if (blob) {
+                              const downloadUrl = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = downloadUrl;
+                              a.download = `kanuka-clip-${epaper.date}.jpg`;
+                              a.click();
+                              URL.revokeObjectURL(downloadUrl);
+                            }
+                          }}
+                          className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors border-l border-white/10 whitespace-nowrap"
+                        >
+                          <Download size={12} strokeWidth={2.5} />
+                          Save
+                        </button>
+
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setIsCropping(false); setCrop(undefined); setCompletedCrop(undefined); }}
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors border-l border-white/10 whitespace-nowrap"
+                        >
+                          <X size={12} strokeWidth={2.5} />
+                          Cancel
+                        </button>
                       </div>
-                    ))}
-                  </HTMLPageFlip>
-                </div>
-              </QuickPinchZoom>
-            </div>
-          )}
+                    )}
+                  >
+                    <img ref={cropImgRef} src={epaper.imageUrls[currentPage]} alt="Crop" className="w-full h-auto object-contain rounded-lg shadow-2xl" />
+                  </ReactCrop>
+               </div>
+            ) : (
+              <div className={`w-full h-full ${zoom > 1 ? 'overflow-auto' : 'flex items-center justify-center'}`}>
+                <QuickPinchZoom
+                  ref={pinchZoomRef}
+                  onUpdate={onUpdate}
+                  draggableUnZoomed={false}
+                  enabled={!isCropping}
+                  maxZoom={4}
+                  minZoom={1}
+                  tapZoomFactor={0}
+                >
+                  <div ref={pinchTargetRef} className="w-full h-full flex items-center justify-center origin-center transition-all duration-300">
+                    {/* @ts-ignore */}
+                    <HTMLPageFlip
+                      width={550}
+                      height={800}
+                      size="stretch"
+                      minWidth={315}
+                      maxWidth={1000}
+                      minHeight={400}
+                      maxHeight={1533}
+                      maxShadowOpacity={0.5}
+                      showCover={false}
+                      mobileScrollSupport={true}
+                      onFlip={(e: any) => setCurrentPage(e.data)}
+                      className="page-flip-container shadow-2xl rounded-lg mx-auto"
+                      style={{ display: 'block' }}
+                      useMouseEvents={zoom === 1 && !isCropping}
+                      useTouchEvents={zoom === 1 && !isCropping}
+                      startPage={currentPage}
+                      ref={flipRef}
+                      display="single"
+                      usePortrait={true}
+                      showPageCorners={zoom === 1}
+                      disableFlipByClick={zoom > 1}
+                    >
+                      {epaper.imageUrls.map((url, i) => (
+                        <div key={i} className="page shadow-inner bg-white flex items-center justify-center overflow-hidden">
+                          <img src={url} alt={`Page ${i + 1}`} className="w-full h-full object-contain pointer-events-none select-none" />
+                        </div>
+                      ))}
+                    </HTMLPageFlip>
+                  </div>
+                </QuickPinchZoom>
+              </div>
+            )}
 
           {zoom <= 1 && !isCropping && (
             <>
