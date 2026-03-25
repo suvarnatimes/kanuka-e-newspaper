@@ -266,7 +266,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                     crop={crop} 
                     onChange={c => setCrop(c)} 
                     onComplete={c => setCompletedCrop(c)}
-                    className="w-full h-full flex items-center justify-center font-sans"
+                    className="w-full h-full flex items-start justify-center font-sans"
                     style={{ "--rc-mask-color": "rgba(0, 0, 0, 0.85)" } as any}
                     renderSelectionAddon={() => (
                       <div 
