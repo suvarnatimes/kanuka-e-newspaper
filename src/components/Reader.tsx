@@ -391,6 +391,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
             </button>
           </div>
 
+          <ToolBtn onClick={() => { setIsCropping(!isCropping); setCrop(undefined); if (!isCropping) handleZoomOut(); }} icon={<Scissors size={20} strokeWidth={1.5} />} label="CLIP" active={isCropping} />
           <ToolBtn onClick={() => setShowDatePicker(!showDatePicker)} icon={<Calendar size={20} />} label="ARCH" active={showDatePicker} />
           
           {isDesktop && (
