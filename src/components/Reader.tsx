@@ -255,15 +255,18 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
               showCover={false}
               mobileScrollSupport={true}
               onFlip={(e: any) => setCurrentPage(e.data)}
-              className="page-flip-container shadow-2xl rounded-lg overflow-hidden"
-              style={{ margin: '0 auto' }}
-              useMouseEvents={zoom === 1}
+              className="page-flip-container shadow-2xl rounded-lg mx-auto"
+              style={{ display: 'block' }}
+              useMouseEvents={zoom === 1 && !isCropping}
               startPage={currentPage}
               ref={flipRef}
+              usePortrait={true}
+              showPageCorners={true}
+              disableFlipByClick={false}
             >
               {epaper.imageUrls.map((url, i) => (
-                <div key={i} className="page shadow-inner bg-slate-800 flex items-center justify-center">
-                  <img src={url} alt={`Page ${i + 1}`} className="w-full h-full object-contain pointer-events-none" />
+                <div key={i} className="page shadow-inner bg-white flex items-center justify-center overflow-hidden">
+                  <img src={url} alt={`Page ${i + 1}`} className="w-full h-full object-contain pointer-events-none select-none" />
                 </div>
               ))}
             </HTMLPageFlip>
