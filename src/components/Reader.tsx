@@ -38,6 +38,19 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const pinchZoomRef = useRef<any>(null);
   const pinchTargetRef = useRef<HTMLDivElement>(null);
 
+  const handleZoomIn = () => {
+    if (pinchZoomRef.current) {
+      pinchZoomRef.current.scaleTo({ scale: Math.min(zoom + 0.5, 4), duration: 250 });
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (pinchZoomRef.current) {
+      pinchZoomRef.current.alignCenter({ duration: 250 });
+      setZoom(1);
+    }
+  };
+
   const totalPages = epaper.imageUrls.length;
 
   const onUpdate = React.useCallback(({ x, y, scale }: { x: number, y: number, scale: number }) => {
@@ -337,7 +350,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
       <footer className="shrink-0 bg-white border-t border-slate-200 z-[100] safe-pb pb-2 sm:pb-0 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
         <div className="flex items-center justify-between px-4 py-2 bg-white no-zoom">
           <div className="flex items-center gap-1 sm:gap-4 flex-1 justify-start">
-            <ToolBtn onClick={() => { setIsCropping(!isCropping); setCrop(undefined); if (!isCropping) setZoom(1); }} icon={<Scissors size={20} strokeWidth={1.5} />} label="CLIP" active={isCropping} />
+            <ToolBtn onClick={() => { setIsCropping(!isCropping); setCrop(undefined); if (!isCropping) handleZoomOut(); }} icon={<Scissors size={20} strokeWidth={1.5} />} label="CLIP" active={isCropping} />
             <div className="relative">
               <ToolBtn onClick={() => setShowDatePicker(!showDatePicker)} icon={<Calendar size={20} strokeWidth={1.5} />} label="ARCH" active={showDatePicker} />
               {showDatePicker && (
@@ -345,6 +358,11 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                     <DayPicker mode="single" selected={parseISO(epaper.date)} onSelect={(d) => { if (d) window.location.href = `/epaper/${format(d, 'yyyy-MM-dd')}`; }} className="m-0 text-slate-800 text-sm" />
                 </div>
               )}
+            </div>
+            <div className="h-8 w-px bg-slate-100 mx-1 hidden sm:block" />
+            <div className="flex items-center gap-1">
+               <ToolBtn onClick={handleZoomIn} icon={<Plus size={20} strokeWidth={1.5} />} label="IN" />
+               <ToolBtn onClick={handleZoomOut} icon={<Minus size={20} strokeWidth={1.5} />} label="OUT" />
             </div>
           </div>
 
