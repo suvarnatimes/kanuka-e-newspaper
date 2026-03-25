@@ -7,8 +7,6 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import HTMLPageFlip from 'react-pageflip';
-import QuickPinchZoom, { make3dTransformValue } from 'react-quick-pinch-zoom';
 
 interface ReaderProps {
   epaper: {
@@ -36,32 +34,29 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const cropImgRef = useRef<HTMLImageElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
-  const flipRef = useRef<any>(null);
-  const pinchZoomRef = useRef<any>(null);
   const pinchTargetRef = useRef<HTMLDivElement>(null);
 
-  const handleZoomIn = () => {
-    if (pinchZoomRef.current) {
-      pinchZoomRef.current.scaleTo({ scale: Math.min(zoom + 0.5, 4), duration: 250 });
-    }
-  };
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
-  const handleZoomOut = () => {
-    if (pinchZoomRef.current) {
-      pinchZoomRef.current.alignCenter({ duration: 250 });
-      setZoom(1);
-    }
-  };
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth >= 768 && windowWidth < 1024;
+  const isDesktop = windowWidth >= 1024;
+  
+  const desktopWidth = windowWidth - 256 - 80; // 256 sidebar + 80 padding
+  const desktopHeight = desktopWidth * (1150 / 800); 
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 3));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
+  const handleZoomReset = () => setZoom(1);
+
 
   const totalPages = epaper.imageUrls.length;
-
-  const onUpdate = React.useCallback(({ x, y, scale }: { x: number, y: number, scale: number }) => {
-    const el = pinchTargetRef.current;
-    if (el) {
-      el.style.setProperty('transform', make3dTransformValue({ x, y, scale }));
-    }
-    setZoom(scale);
-  }, []);
 
   // Swipe detection for page turns
   const touchStartX = useRef(0);
@@ -229,12 +224,13 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
       return () => window.removeEventListener('keydown', handle);
   }, [currentPage, totalPages]);
 
+
   return (
     <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden relative font-sans h-[100dvh]">
-      {/* Header - Prajabhoomi Desktop Style */}
-      <div className="bg-[#2D3436] px-4 py-3 flex items-center justify-start shrink-0 z-[100] shadow-md">
-        <div className="bg-[#FEC401] px-1 mr-4 hidden sm:block h-6 w-1"></div>
-        <h1 className="text-sm sm:text-lg font-black text-white uppercase tracking-tight">
+      {/* Secondary Header - Dark */}
+      <div className="bg-[#2D3436] px-2 sm:px-4 py-2 flex items-center justify-start shrink-0 z-[100] shadow-md">
+        <div className="bg-[#FEC401] px-1 mr-2 sm:mr-4 hidden sm:block h-6 w-1"></div>
+        <h1 className="text-[10px] sm:text-sm font-black text-white uppercase tracking-tight">
           {epaper.title}-{format(parseISO(epaper.date), 'dd-MM-yyyy')}-{epaper.edition} - Page {currentPage + 1}
         </h1>
       </div>
@@ -264,13 +260,12 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
            </div>
         </aside>
 
-        {/* Main Content Area */}
         <main 
           ref={scrollRef}
-          className={`flex-1 overflow-hidden bg-slate-100/30 flex items-center justify-center transition-all duration-300 relative`}
+          className={`flex-1 overflow-hidden bg-slate-200/50 flex items-center justify-center transition-all duration-300 relative`}
         >
           <div 
-            className="w-full h-full lg:p-0 p-2 flex items-center justify-center"
+            className={`w-full h-full ${isDesktop ? 'p-10' : 'p-0'} flex items-start justify-center overflow-auto custom-scrollbar`}
           >
             {isCropping ? (
                <div className="w-full h-full animate-in fade-in duration-300 no-zoom" style={{ touchAction: 'none' }}>
@@ -346,109 +341,60 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                   </ReactCrop>
                </div>
             ) : (
-              <div className={`w-full h-full ${zoom > 1 ? 'overflow-auto' : 'flex items-center justify-center'}`}>
-                <QuickPinchZoom
-                  ref={pinchZoomRef}
-                  onUpdate={onUpdate}
-                  draggableUnZoomed={false}
-                  enabled={!isCropping}
-                  maxZoom={4}
-                  minZoom={1}
-                  tapZoomFactor={0}
-                >
-                  <div ref={pinchTargetRef} className="w-full h-full flex items-center justify-center origin-center transition-all duration-300">
-                    {/* @ts-ignore */}
-                    <HTMLPageFlip
-                      width={800}
-                      height={1150}
-                      size="stretch"
-                      minWidth={315}
-                      maxWidth={2500}
-                      minHeight={400}
-                      maxHeight={3500}
-                      maxShadowOpacity={0.5}
-                      showCover={false}
-                      mobileScrollSupport={true}
-                      onFlip={(e: any) => setCurrentPage(e.data)}
-                      className="page-flip-container shadow-2xl rounded-lg mx-auto"
-                      style={{ display: 'block' }}
-                      useMouseEvents={zoom === 1 && !isCropping}
-                      /* @ts-ignore */
-                      useTouchEvents={zoom === 1 && !isCropping}
-                      startPage={currentPage}
-                      ref={flipRef}
-                      display="single"
-                      usePortrait={true}
-                      showPageCorners={zoom === 1}
-                      disableFlipByClick={zoom > 1}
+               <div 
+                 className={`w-full ${isDesktop ? 'max-w-[1500px] px-10' : 'px-0'} flex items-center justify-center transition-all duration-300 relative group`}
+                 style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+               >
+                  <img 
+                    src={epaper.imageUrls[currentPage]} 
+                    alt={`Page ${currentPage + 1}`} 
+                    className={`w-full h-auto object-contain select-none ${isDesktop ? 'shadow-2xl rounded-lg' : 'shadow-none rounded-none'} transition-all`} 
+                    draggable={false} 
+                  />
+                  
+                  {/* Prev/Next Navigation Overlays */}
+                  {currentPage > 0 && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setCurrentPage(c => c - 1); }} 
+                      className="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/10 text-white transition-all z-[60] shadow-2xl no-zoom lg:opacity-0 lg:group-hover:opacity-100"
                     >
-                      {epaper.imageUrls.map((url, i) => (
-                        <div key={i} className="page shadow-inner bg-white flex items-center justify-center overflow-hidden">
-                          <img src={url} alt={`Page ${i + 1}`} className="w-full h-full object-contain pointer-events-none select-none" />
-                        </div>
-                      ))}
-                    </HTMLPageFlip>
-                  </div>
-                </QuickPinchZoom>
-              </div>
+                      <ChevronLeft size={20} />
+                    </button>
+                  )}
+                  {currentPage < totalPages - 1 && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setCurrentPage(c => c + 1); }} 
+                      className="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/10 text-white transition-all z-[60] shadow-2xl no-zoom lg:opacity-0 lg:group-hover:opacity-100"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  )}
+               </div>
             )}
-
-          {zoom <= 1 && !isCropping && (
-            <>
-              <button 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  if (flipRef.current) {
-                    /* @ts-ignore */
-                    flipRef.current.pageFlip().flipPrev();
-                  } else {
-                    currentPage > 0 && setCurrentPage(c => c - 1);
-                  }
-                }} 
-                className="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/10 text-white transition-all z-[100] no-zoom shadow-2xl"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  if (flipRef.current) {
-                    /* @ts-ignore */
-                    flipRef.current.pageFlip().flipNext();
-                  } else {
-                    currentPage < totalPages - 1 && setCurrentPage(c => c + 1);
-                  }
-                }} 
-                className="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/10 text-white transition-all z-[100] no-zoom shadow-2xl"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </>
-          )}
         </div>
       </main>
     </div>
 
-    <footer className="shrink-0 bg-white border-t border-slate-200 z-[100] safe-pb pb-2 sm:pb-0 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
-        <div className="flex items-center justify-between px-4 py-2 bg-white no-zoom">
-          <div className="flex items-center gap-1 sm:gap-4 flex-1 justify-start">
-            <ToolBtn onClick={() => { setIsCropping(!isCropping); setCrop(undefined); if (!isCropping) handleZoomOut(); }} icon={<Scissors size={20} strokeWidth={1.5} />} label="CLIP" active={isCropping} />
-            <div className="relative">
-              <ToolBtn onClick={() => setShowDatePicker(!showDatePicker)} icon={<Calendar size={20} strokeWidth={1.5} />} label="ARCH" active={showDatePicker} />
-              {showDatePicker && (
-                <div ref={datePickerRef} className="absolute bottom-full mb-4 left-0 bg-white border border-slate-200 rounded-[2rem] shadow-2xl p-4 z-[110] animate-in slide-in-from-bottom-4">
-                    <DayPicker mode="single" selected={parseISO(epaper.date)} onSelect={(d) => { if (d) window.location.href = `/epaper/${format(d, 'yyyy-MM-dd')}`; }} className="m-0 text-slate-800 text-sm" />
-                </div>
-              )}
-            </div>
-            <div className="h-8 w-px bg-slate-100 mx-1 hidden sm:block" />
-            <div className="flex items-center gap-1">
-               <ToolBtn onClick={handleZoomIn} icon={<Plus size={20} strokeWidth={1.5} />} label="IN" />
-               <ToolBtn onClick={handleZoomOut} icon={<Minus size={20} strokeWidth={1.5} />} label="OUT" />
-            </div>
+    <footer className="shrink-0 bg-white border-t border-slate-200 z-[100] safe-pb pb-1 shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
+        <div className="flex items-center justify-center gap-0.5 sm:gap-4 lg:gap-6 px-2 py-1 bg-white no-zoom overflow-x-auto custom-scrollbar">
+          {/* Action icon (leftmost) */}
+          <div className="hidden sm:flex items-center">
+            <button className="p-2 text-slate-700 bg-slate-100 rounded-full active:scale-95 transition-all outline-none">
+               <Newspaper size={20} strokeWidth={2.5} />
+            </button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <ToolBtn onClick={() => setShowDatePicker(!showDatePicker)} icon={<Calendar size={20} />} label="ARCH" active={showDatePicker} />
+          
+          {isDesktop && (
+            <>
+              <ToolBtn onClick={handleZoomIn} icon={<Plus size={20} />} label="IN" />
+              <ToolBtn onClick={handleZoomOut} icon={<Minus size={20} />} label="OUT" />
+            </>
+          )}
+
+          {/* PAGE pill in the center of the list */}
+          <div className="px-1 sm:px-2">
              <div className="relative group/page">
                 <select 
                   value={currentPage} 
@@ -457,34 +403,26 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                 >
                   {[...Array(totalPages)].map((_, i) => <option key={i} value={i}>PAGE {i + 1}</option>)}
                 </select>
-                <div className="bg-indigo-600 text-white rounded-2xl px-5 py-2 text-[10px] font-black shadow-lg shadow-indigo-200 flex items-center gap-2 transition-transform active:scale-95">
+                <div className="bg-[#5145FA] text-white rounded-xl sm:rounded-2xl px-3 sm:px-6 py-2.5 text-[10px] font-black shadow-lg shadow-indigo-200 flex items-center gap-2 transition-transform active:scale-95 whitespace-nowrap">
                    PAGE {currentPage + 1}
                 </div>
              </div>
+          </div>
 
-             <div className="hidden lg:flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-3 py-1.5 shadow-sm">
-                <button onClick={() => handleZoom('out')} className="text-slate-400 hover:text-indigo-600 transition-all p-1"><Minus size={16} strokeWidth={3} /></button>
-                <span className="text-[10px] font-black text-slate-500 min-w-[35px] text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-                <button onClick={() => handleZoom('in')} className="text-slate-400 hover:text-indigo-600 transition-all p-1"><Plus size={16} strokeWidth={3} /></button>
+          <ToolBtn onClick={async () => { 
+              const baseUrl = window.location.origin;
+              const path = window.location.pathname;
+              const fullUrl = `${baseUrl}${path}`;
+              try { await navigator.share({ title: epaper.title, url: fullUrl }); } catch {} 
+          }} icon={<Share2 size={20} />} label="SHARE" />
+          
+          <a href={epaper.pdfUrl} download className="flex flex-col items-center gap-1.5 p-1.5 sm:p-2 text-slate-500 hover:text-indigo-600 transition-all group/pdf">
+             <div className="group-hover/pdf:scale-110 transition-transform">
+                <Download size={20} strokeWidth={2} />
              </div>
-          </div>
-
-          <div className="flex items-center gap-1 sm:gap-4 flex-1 justify-end">
-            <div className="hidden lg:block">
-              <ToolBtn onClick={() => zoom !== 1 ? setZoom(1) : handleZoom('in')} icon={<ZoomIn size={20} strokeWidth={1.5} />} label={zoom !== 1 ? 'RESET' : 'ZOOM'} active={zoom !== 1} />
-            </div>
-            <ToolBtn onClick={async () => { 
-                const baseUrl = window.location.origin;
-                const path = window.location.pathname;
-                const fullUrl = `${baseUrl}${path}`;
-                try { await navigator.share({ title: epaper.title, url: fullUrl }); } catch {} 
-            }} icon={<Share2 size={20} strokeWidth={1.5} />} label="SHARE" />
-            <a href={epaper.pdfUrl} download className="flex flex-col items-center gap-1 p-2 text-slate-400 hover:text-indigo-600 transition-all group/pdf">
-               <Download size={20} strokeWidth={1.5} className="transition-transform group-hover/pdf:translate-y-0.5" />
-               <span className="text-[10px] font-bold uppercase tracking-tighter">PDF</span>
-            </a>
-          </div>
-      </div>
+             <span className="text-[9px] font-black uppercase tracking-tighter">PDF</span>
+          </a>
+        </div>
     </footer>
 
       {/* Share Modal Overlay - Prajabhoomi "Pro" Style */}
@@ -595,11 +533,11 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
 // Utility component for tools
 function ToolBtn({ onClick, icon, label, active = false }: { onClick: () => void, icon: React.ReactNode, label: string, active?: boolean }) {
   return (
-    <button onClick={onClick} className={`flex flex-col items-center gap-2 p-3 group transition-all active:scale-90 ${active ? 'text-indigo-600 translate-y-[-4px]' : 'text-slate-500 hover:text-indigo-600'}`}>
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 p-1.5 sm:p-3 group transition-all active:scale-90 ${active ? 'text-indigo-600' : 'text-slate-500 hover:text-indigo-600'}`}>
       <div className={`${active ? 'bg-indigo-50 p-2 rounded-xl text-indigo-600' : ''} transition-all`}>
-        {React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}
+        {React.cloneElement(icon as React.ReactElement<any>, { size: 18 })}
       </div>
-      <span className="text-[10px] font-black uppercase tracking-tighter">{label}</span>
+      <span className="text-[9px] font-black uppercase tracking-tighter">{label}</span>
     </button>
   );
 }
