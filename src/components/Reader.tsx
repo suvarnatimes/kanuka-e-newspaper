@@ -283,6 +283,7 @@ const UnifiedReader: React.FC<ReaderProps> = ({ epaper }) => {
                     useTouchEvents={zoom === 1 && !isCropping}
                     startPage={currentPage}
                     ref={flipRef}
+                    display="single"
                     usePortrait={true}
                     showPageCorners={zoom === 1}
                     disableFlipByClick={zoom > 1}
